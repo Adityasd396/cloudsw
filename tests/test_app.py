@@ -206,6 +206,63 @@ class WatchPartyTests(unittest.TestCase):
         self.assertEqual(state['playing'],1)
         self.assertEqual(state['position'],50)
 
+    def test_last_leave_deletes_room_and_room_data_but_keeps_names(self):
+        self.host.post(self.url,json={'action':'chat','body':'Room history'})
+        self.guest.post(self.url,json={'action':'add','url':'aqz-KE-bpKQ'})
+        first=self.host.post(self.url+'/leave',json={})
+        self.assertFalse(first.json['room_deleted'])
+        self.assertTrue(self.guest.get(self.url).json['is_host'])
+        last=self.guest.post(self.url+'/leave',json={})
+        self.assertTrue(last.json['room_deleted'])
+        self.assertEqual(self.guest.get(self.url).status_code,404)
+        self.assertEqual(self.guest.get('/api/profile').json['name'],'Guest')
+        with app.app_context():
+            for table in ['messages','queue','typing','presence','room_ads','members']:
+                self.assertEqual(db().execute(f'SELECT count(*) FROM {table}').fetchone()[0],0)
+
+    def test_disconnect_grace_and_expiry(self):
+        import time
+        from unittest.mock import patch
+        start=time.time()
+        self.host.post(self.url+'/presence',json={'active':False})
+        self.guest.post(self.url+'/presence',json={'active':False})
+        with patch('app.time.time',return_value=start+90):
+            self.host.get('/api/health')
+            with app.app_context():self.assertEqual(db().execute('SELECT count(*) FROM rooms').fetchone()[0],1)
+        with patch('app.time.time',return_value=start+130):
+            self.host.get('/api/health')
+            with app.app_context():self.assertEqual(db().execute('SELECT count(*) FROM rooms').fetchone()[0],0)
+
+    def test_leave_retry_is_safe_and_cannot_remove_other_members(self):
+        outsider=app.test_client()
+        response=outsider.post(self.url+'/leave',json={})
+        self.assertEqual(response.status_code,200)
+        self.assertFalse(response.json['room_deleted'])
+        self.assertEqual(len(self.host.get(self.url).json['members']),2)
+        self.host.post(self.url+'/leave',json={})
+        retry=self.host.post(self.url+'/leave',json={})
+        self.assertEqual(retry.status_code,200)
+        self.assertFalse(retry.json['room_deleted'])
+        self.assertTrue(self.guest.get(self.url).json['is_host'])
+        self.guest.post(self.url+'/leave',json={})
+        for client in (self.host,self.guest):
+            retry=client.post(self.url+'/leave',json={})
+            self.assertEqual(retry.status_code,200)
+            self.assertTrue(retry.json['room_deleted'])
+        self.assertEqual(self.guest.get(self.url).status_code,404)
+
+    def test_simultaneous_final_leaves_delete_room(self):
+        import concurrent.futures
+        cookies=[c.get_cookie('session').value for c in (self.host,self.guest)]
+        def leave(cookie):
+            client=app.test_client();client.set_cookie('session',cookie)
+            response=client.post(self.url+'/leave',json={})
+            return response.status_code,response.json['room_deleted']
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            responses=list(pool.map(leave,cookies))
+        self.assertEqual(sorted(responses),[(200,False),(200,True)])
+        self.assertEqual(self.host.get(self.url).status_code,404)
+
     def test_presence_green_yellow_red_thresholds(self):
         import time
         from unittest.mock import patch

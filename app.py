@@ -135,6 +135,26 @@ def identity():
         return jsonify(error='Cross-origin requests are not allowed.'), 403
     if request.method == 'POST' and request.is_json and not isinstance(request.get_json(silent=True), dict):
         return jsonify(error='Send a valid request object.'), 400
+    if request.path.startswith('/api/'):
+        cleanup_empty_rooms()
+
+
+def delete_room_records(room_id):
+    for table in ('messages','queue','typing','presence','room_ads','members'):
+        db().execute(f'DELETE FROM {table} WHERE room=?',(room_id,))
+    db().execute('DELETE FROM rooms WHERE id=?',(room_id,))
+
+
+def cleanup_empty_rooms():
+    """Expire abandoned rooms when the next API request reaches this worker."""
+    cutoff=time.time()-120
+    expired=db().execute('SELECT id FROM rooms WHERE updated<? AND NOT EXISTS (SELECT 1 FROM members WHERE members.room=rooms.id AND members.seen>=?)',(cutoff,cutoff)).fetchall()
+    if not expired:return
+    db().execute('BEGIN IMMEDIATE')
+    for candidate in expired:
+        still_empty=db().execute('SELECT id FROM rooms WHERE id=? AND updated<? AND NOT EXISTS (SELECT 1 FROM members WHERE members.room=rooms.id AND members.seen>=?)',(candidate['id'],cutoff,cutoff)).fetchone()
+        if still_empty:delete_room_records(candidate['id'])
+    db().commit()
 
 def video_id(value):
     value = str(value).strip()
@@ -162,7 +182,7 @@ def index():
 
 @app.get('/api/health')
 def health():
-    return jsonify(application='afterglow', protocol=1, status='ok')
+    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2'])
 
 
 @app.get('/api/profile')
@@ -370,6 +390,30 @@ def room_presence(room_id):
     else:db().execute('DELETE FROM typing WHERE room=? AND id=?',(room_id,session['uid']))
     db().commit()
     return jsonify(ok=True)
+
+
+@app.post('/api/rooms/<room_id>/leave')
+def leave_room(room_id):
+    db().execute('BEGIN IMMEDIATE')
+    if not db().execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
+        db().rollback()
+        return jsonify(ok=True,room_deleted=True)
+    member=db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone()
+    if not member:
+        db().rollback()
+        return jsonify(ok=True,room_deleted=False)
+    for table in ('members','presence','typing'):
+        db().execute(f'DELETE FROM {table} WHERE room=? AND id=?',(room_id,session['uid']))
+    empty=not db().execute('SELECT 1 FROM members WHERE room=? LIMIT 1',(room_id,)).fetchone()
+    if empty:delete_room_records(room_id)
+    else:
+        room=db().execute('SELECT host FROM rooms WHERE id=?',(room_id,)).fetchone()
+        if room and room['host']==session['uid']:
+            successor=db().execute('SELECT id FROM members WHERE room=? ORDER BY seen DESC LIMIT 1',(room_id,)).fetchone()
+            db().execute('UPDATE rooms SET host=? WHERE id=?',(successor['id'],room_id))
+            db().execute('DELETE FROM room_ads WHERE room=?',(room_id,))
+    db().commit()
+    return jsonify(ok=True,room_deleted=empty)
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=int(os.environ.get('PORT', '8000')), debug=False)

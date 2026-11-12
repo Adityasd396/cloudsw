@@ -114,3 +114,8 @@ The resume fix prevents host polling from enforcing an older paused state on the
 ## Playback resume race fixes
 
 Deliberate play/pause/seek commands take priority over observer samples for three seconds. Native queued heartbeat samples cannot replace pending explicit commands, buffering/seeking samples are not published as pauses, and blocked autoplay is surfaced for a user tap instead of broadcasting a false pause. Web explicit controls are serialized separately from heartbeats. Guests apply drift correction beyond 1.25 seconds and avoid concurrent play promises. Host polling does not enforce previous remote play/pause state on the local authoritative player. Automated regressions cover stale pause after Resume, delayed command responses, guest pause/resume/seek, and repeated play attempts. Actual iOS/Android playback permission, network and buffering behavior still need real-device testing.
+
+
+## Empty-room lifecycle
+
+The Leave button removes the current participant. When the last participant explicitly leaves, the room, messages, queue, typing, presence, and ad-status records are deleted transactionally. Saved display-name profiles remain. If the host leaves while others remain, hosting passes to a remaining participant. Backgrounding, refresh, and closing only report inactivity; they do not immediately erase the room. If every participant stops sending heartbeats, the room expires after two minutes and is cleaned on the next API request. Reconnecting within the grace window preserves it. Clients return to the home screen when an expired room returns 404.

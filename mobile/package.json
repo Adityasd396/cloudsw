@@ -19,6 +19,11 @@
     "react-native": "0.88.1",
     "react-native-webview": "14.0.1"
   },
+  "overrides": {
+    "@expo/fingerprint": {
+      "minimatch": "11.0.1"
+    }
+  },
   "devDependencies": {
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
