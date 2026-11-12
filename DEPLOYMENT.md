@@ -102,3 +102,10 @@ Every joined participant can now play/pause, seek, select a video, add songs, ad
 Dots before each participant name use green for a current heartbeat (under 2.5 seconds), yellow for delayed updates (2.5–8 seconds), and red for explicit inactivity or no heartbeat for 8 seconds. Closing/backgrounding reports inactivity when the platform permits; abrupt network loss is detected by timeout. A quiet viewer with a healthy connection stays green.
 
 Long-session changes reduce heartbeat disk writes to at most once per second per participant, cap pending user commands at 12, and keep fetched chat history to the most recent 100 messages while retaining all messages in SQLite. Playback requests remain independent of chat commands. Automated tests cover a simulated three-hour timeline, saved history, shared controls, and presence transitions. This is not a real-time video soak test: continuous playback and recovery still require testing on real Android and iPhone devices and the chosen host. Network loss, platform suspension, hosting limits, and YouTube restrictions can interrupt playback.
+
+
+## Creator-host and streamlined room update
+
+The creator is now the controlling host; guests can add videos, while playback, seeking, queue management, and host transfer are host-only. Tap an active participant name to transfer hosting. The room code plus Share link and Invite friends are visible at the bottom. Create room asks only for a display name and a create button. The emoji reaction strip is hidden; typed emoji (including flags, skin tones, joined sequences, and keycaps) animate on receipt.
+
+The resume fix prevents host polling from enforcing an older paused state on the local host player. Guests follow the shared state. Host-ad notices rely on the native full-site observer detecting known ad indicators; the YouTube iframe API does not provide reliable ad detection, so browser-host ads cannot be reliably announced. Notices expire after ten seconds without renewal. Input font sizing avoids common iPhone focus-zoom behavior without disabling user-controlled pinch zoom. Real iPhone/Android player behavior still needs device verification.

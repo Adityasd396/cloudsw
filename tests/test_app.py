@@ -12,6 +12,7 @@ class WatchPartyTests(unittest.TestCase):
         with app.app_context():
             db().executescript('''
             CREATE TABLE presence(room TEXT,id TEXT,active INTEGER,PRIMARY KEY(room,id));
+            CREATE TABLE room_ads(room TEXT PRIMARY KEY,active INTEGER,updated REAL);
             CREATE TABLE profiles(id TEXT PRIMARY KEY,name TEXT,updated REAL);
             CREATE TABLE typing(room TEXT,id TEXT,updated REAL,PRIMARY KEY(room,id));
             CREATE TABLE rooms(id TEXT PRIMARY KEY,name TEXT,host TEXT,video TEXT,playing INTEGER DEFAULT 0,position REAL DEFAULT 0,updated REAL);
@@ -36,7 +37,7 @@ class WatchPartyTests(unittest.TestCase):
         self.assertEqual(self.host.get(self.url).json['messages'][0]['body'], '<script>hello</script>')
         result = self.guest.post(self.url, json={'action': 'add', 'url': 'https://youtu.be/aqz-KE-bpKQ', 'title': 'Big Buck Bunny'})
         item = result.json['queue'][0]
-        self.assertEqual(self.guest.post(self.url, json={'action': 'select', 'id': item['id']}).status_code, 200)
+        self.assertEqual(self.guest.post(self.url, json={'action': 'select', 'id': item['id']}).status_code, 403)
         self.host.post(self.url, json={'action': 'next'})
         self.host.post(self.url, json={'action': 'playback', 'position': 42, 'playing': True})
         state = self.guest.get(self.url).json
@@ -48,7 +49,7 @@ class WatchPartyTests(unittest.TestCase):
         self.assertEqual(state['queue'], [])
 
     def test_validation_and_access(self):
-        self.assertEqual(self.guest.post(self.url, json={'action': 'playback', 'position': 99}).status_code, 200)
+        self.assertEqual(self.guest.post(self.url, json={'action': 'playback', 'position': 99}).status_code, 403)
         self.assertEqual(self.host.post(self.url, json={'action': 'playback', 'position': 'bad'}).status_code, 400)
         self.assertEqual(self.guest.post(self.url, json={'action': 'add', 'url': 'https://evil.com/watch?v=aqz-KE-bpKQ'}).status_code, 400)
         self.assertEqual(app.test_client().post(self.url, json={'action': 'chat', 'body': 'no'}).status_code, 403)
@@ -70,7 +71,7 @@ class WatchPartyTests(unittest.TestCase):
             missing=self.host.get('/api/videos?q=nonexistent')
             self.assertEqual(missing.status_code,503)
             self.assertEqual(missing.json['code'],'search_not_configured')
-        self.assertEqual(self.guest.post(self.url, json={'action': 'watch', 'url': 'aqz-KE-bpKQ'}).status_code, 200)
+        self.assertEqual(self.guest.post(self.url, json={'action': 'watch', 'url': 'aqz-KE-bpKQ'}).status_code, 403)
         result = self.host.post(self.url, json={'action': 'watch', 'url': 'aqz-KE-bpKQ'})
         self.assertEqual(result.json['video'], 'aqz-KE-bpKQ')
         self.assertEqual(result.json['playing'], 1)
@@ -130,7 +131,7 @@ class WatchPartyTests(unittest.TestCase):
         for video,title in [('aqz-KE-bpKQ','First'),('eRsGyueVLvQ','Second'),('R6MlUcmOul8','Third')]:
             response=self.host.post(self.url,json={'action':'add','url':video,'title':title})
         original=response.json['queue']
-        self.assertTrue(self.guest.get(self.url).json['can_control'])
+        self.assertFalse(self.guest.get(self.url).json['can_control'])
         moved=self.host.post(self.url,json={'action':'move','id':original[2]['id'],'direction':'up'})
         self.assertEqual([item['title'] for item in moved.json['queue']],['First','Third','Second'])
         self.host.post(self.url,json={'action':'move','id':original[2]['id'],'direction':'up'})
@@ -164,7 +165,7 @@ class WatchPartyTests(unittest.TestCase):
         response=self.host.post(self.url,json={'action':'playback','position':25,'playing':True,'compact':True})
         self.assertEqual(response.json,{'ok':True})
         self.assertEqual(self.guest.get(self.url).json['position'],25)
-        self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':30,'compact':True}).status_code,200)
+        self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':30,'compact':True}).status_code,403)
 
     def test_presence_inactive_resume_and_timeout(self):
         self.guest.post(self.url+'/presence',json={'active':False})
@@ -180,19 +181,21 @@ class WatchPartyTests(unittest.TestCase):
         self.assertEqual(len(self.host.get(self.url).json['members']),1)
         self.assertEqual(app.test_client().post(self.url+'/presence',json={'active':False}).status_code,403)
 
-    def test_every_participant_controls_and_stale_clock_cannot_override(self):
-        previous=self.host.get(self.url).json['updated']
-        paused=self.guest.post(self.url,json={'action':'playback','position':80,'playing':False})
-        self.assertEqual(paused.status_code,200)
-        self.assertFalse(paused.json['playing'])
-        stale=self.host.post(self.url,json={'action':'playback','position':10,'playing':True,'expected_updated':previous,'compact':True})
-        self.assertEqual(stale.status_code,409)
-        state=self.host.get(self.url).json
-        self.assertEqual(state['position'],80)
-        self.assertFalse(state['playing'])
-        item=self.guest.post(self.url,json={'action':'add','url':'eRsGyueVLvQ'}).json['queue'][0]
-        self.assertEqual(self.guest.post(self.url,json={'action':'move','id':item['id'],'direction':'up'}).status_code,200)
-        self.assertEqual(self.guest.post(self.url,json={'action':'remove','id':item['id']}).status_code,200)
+    def test_creator_host_controls_transfer_and_ads(self):
+        self.assertTrue(self.host.get(self.url).json['can_control'])
+        self.assertFalse(self.guest.get(self.url).json['can_control'])
+        self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':0,'playing':False}).status_code,403)
+        self.host.post(self.url,json={'action':'ad_status','active':True})
+        self.assertTrue(self.guest.get(self.url).json['host_ad'])
+        self.host.post(self.url,json={'action':'ad_status','active':False})
+        self.assertFalse(self.guest.get(self.url).json['host_ad'])
+        self.host.post(self.url,json={'action':'playback','position':40,'playing':False})
+        self.host.post(self.url,json={'action':'playback','position':40,'playing':True})
+        self.assertTrue(self.guest.get(self.url).json['playing'])
+        target=next(p for p in self.host.get(self.url).json['members'] if not p['you'])
+        self.host.post(self.url,json={'action':'transfer_host','member_id':target['member_id']})
+        self.assertTrue(self.guest.get(self.url).json['can_control'])
+        self.assertFalse(self.host.get(self.url).json['can_control'])
 
     def test_presence_green_yellow_red_thresholds(self):
         import time
@@ -220,7 +223,7 @@ class WatchPartyTests(unittest.TestCase):
             self.assertEqual(snapshot['position'],10800)
             self.assertEqual(len(snapshot['messages']),100)
             self.assertEqual(snapshot['messages'][-1]['body'],'Minute 180')
-            self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':10800,'playing':False}).status_code,200)
+            self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':10800,'playing':False}).status_code,403)
             with app.app_context():
                 self.assertEqual(db().execute('SELECT count(*) FROM messages WHERE room=?',(snapshot['id'],)).fetchone()[0],181)
 
