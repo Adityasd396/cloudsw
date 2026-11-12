@@ -320,6 +320,8 @@ def room(room_id):
         db().commit()
     db().execute('UPDATE members SET seen=? WHERE room=? AND id=?',(now,room_id,session['uid']))
     db().commit()
+    if request.method == 'POST' and data.get('action') == 'playback' and data.get('compact'):
+        return jsonify(ok=True)
     room = dict(db().execute('SELECT * FROM rooms WHERE id=?',(room_id,)).fetchone())
     host_id = room.pop('host')
     room['is_host'] = host_id == session['uid']

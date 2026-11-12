@@ -80,3 +80,13 @@ Room creation now asks only for a display name and generates a room code. Room n
 ## Chat and mobile controls update
 
 Chat and typing state refresh every 500 ms while active; network and server latency add to this interval. Video titles use 10px text. Joined participant names appear below the chat. Inline video-link entry is available in the playlist on both interfaces. The native toolbar also offers Add current video and Playlist, with up/down, play and remove controls for hosts. No modal dialogs are used for these actions. Installed phone builds must be rebuilt to receive this update.
+
+
+## Focused room layout
+
+Connected rooms hide the header and use a fixed-screen video/chat layout with active names at the bottom. Only the chat, queue, and selection page scroll internally. Host controls provide ten-second rewind/forward, play/pause, and fullscreen/exit fullscreen. Creating a room opens video selection. In the native phone app this is the full YouTube site in a separate view; Add to playlist reopens that view and selecting a video saves it once, closes the picker, and returns to chat without replacing the current video. The browser uses the configured YouTube search API for its inline selection page because it cannot embed the full YouTube website. Native click/navigation behavior still requires real-device verification.
+
+
+## Minimal home and playback isolation
+
+The initial web and native home screens expose only Create room and Join room. Required setup fields appear after selecting an action. Native Leave room returns to the two-option home. Playback updates use a dedicated compact API response and an independent client request path; they do not queue behind chat sends or carry chat history. Video media comes directly from YouTube. Network round-trip time, shared bandwidth, buffering, server write contention, and geography can still affect synchronization; zero-latency or distance-independent playback is not guaranteed.

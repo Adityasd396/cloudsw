@@ -157,6 +157,12 @@ class WatchPartyTests(unittest.TestCase):
             self.assertEqual(db().execute('SELECT name FROM profiles WHERE name=?',('Guest',)).fetchone()['name'],'Guest')
             self.assertEqual(db().execute('SELECT body FROM messages WHERE room=?',(self.url.rsplit('/',1)[1],)).fetchone()['body'],'hello')
 
+    def test_compact_playback_update_excludes_chat_history(self):
+        response=self.host.post(self.url,json={'action':'playback','position':25,'playing':True,'compact':True})
+        self.assertEqual(response.json,{'ok':True})
+        self.assertEqual(self.guest.get(self.url).json['position'],25)
+        self.assertEqual(self.guest.post(self.url,json={'action':'playback','position':30,'compact':True}).status_code,403)
+
 
 if __name__ == '__main__':
     unittest.main()

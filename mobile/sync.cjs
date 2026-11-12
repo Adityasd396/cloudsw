@@ -59,3 +59,6 @@ function buildVideoLayoutScript(enabled) {
   })();true;`;
 }
 module.exports = {isYoutubeUrl,parseVideo,OBSERVER_SCRIPT,buildApplyScript,buildVideoLayoutScript};
+
+const PICKER_SCRIPT=`(()=>{if(!['youtube.com','www.youtube.com','m.youtube.com'].includes(location.hostname)||window.__afterglowPicker)return;window.__afterglowPicker=true;document.addEventListener('click',event=>{const anchor=event.target.closest&&event.target.closest('a[href]');if(!anchor)return;try{const url=new URL(anchor.href,location.href);if(!['youtube.com','www.youtube.com','m.youtube.com'].includes(url.hostname))return;const id=url.pathname==='/watch'?url.searchParams.get('v'):/^\\/(shorts|live)\\//.test(url.pathname)?url.pathname.split('/')[2]:null;if(!id||!/^[A-Za-z0-9_-]{11}$/.test(id))return;event.preventDefault();event.stopImmediatePropagation();window.ReactNativeWebView.postMessage(JSON.stringify({type:'select-video',url:url.href,title:(anchor.title||anchor.getAttribute('aria-label')||anchor.textContent||'YouTube video').trim().slice(0,150)}))}catch{}},true)})();true;`;
+module.exports.PICKER_SCRIPT=PICKER_SCRIPT;
