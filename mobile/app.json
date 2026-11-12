@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Afterglow",
+    "name": "Solace",
     "slug": "afterglow-mobile",
     "version": "1.0.0",
     "orientation": "default",
@@ -10,7 +10,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.afterglow.watchtogether",
       "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Connect to your Afterglow room server on the same Wi-Fi.",
+        "NSLocalNetworkUsageDescription": "Connect to your Solace room server on the same Wi-Fi.",
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         }
@@ -22,6 +22,7 @@
     },
     "plugins": [
       "expo-status-bar"
-    ]
+    ],
+    "description": "A place, comfort and peace. With love, made for Jaanu."
   }
 }

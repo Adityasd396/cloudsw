@@ -1,4 +1,8 @@
-# Afterglow
+# Solace
+
+A place, comfort and peace.
+
+With love, made for Jaanu. ♡
 
 For cloud hosting and installed Android/iPhone builds without Expo Go, see [DEPLOYMENT.md](DEPLOYMENT.md).
 

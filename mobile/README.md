@@ -1,4 +1,4 @@
-# Afterglow for Android and iPhone
+# Solace for Android and iPhone
 
 This is the native phone client. Its top panel loads **https://m.youtube.com/** directly in a native WebView, not a YouTube iframe. Search, browse, and select videos on the actual mobile YouTube website. Chat, reactions, playlist order, and host controls are native app controls underneath.
 

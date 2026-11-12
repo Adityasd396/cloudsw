@@ -1,6 +1,6 @@
 # Update your existing PythonAnywhere app
 
-Use `Afterglow-pythonanywhere.zip` for the server update. It contains the server files only. `Afterglow-release-source.zip` also includes the Android/iPhone source, build configuration, tests and documentation.
+Use `Solace-pythonanywhere.zip` for the server update. It contains the server files only. `Solace-release-source.zip` also includes the Android/iPhone source, build configuration, tests and documentation.
 
 ## Files to upload
 

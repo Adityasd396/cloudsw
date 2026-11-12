@@ -1,5 +1,6 @@
-# Fix release — 12 November 2026
+# Solace release — 12 November 2026
 
+- Renamed the visible web and native app branding to Solace, with “A place, comfort and peace” and “With love, made for Jaanu”. Saved preferences and installed-app identifiers are preserved.
 - Room Leave is transactional and idempotent. The final explicit Leave deletes the room and its messages, playlist, typing, presence and ad state while keeping saved display names.
 - Simultaneous final Leave requests and retries after lost responses are covered by regressions. Leaving hosts pass control to remaining members.
 - Both native Leave controls await confirmation; failed requests keep the room open and show an error. Polling pauses while Leave is pending.
