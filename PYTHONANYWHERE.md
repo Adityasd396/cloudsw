@@ -15,6 +15,11 @@ static/enhancements.js
 static/player-room.js
 static/rooms.js
 static/style.css
+static/love.html
+static/love.css
+static/love.js
+static/love-film.js
+static/media/for-jaanu.mp4
 ```
 
 Preserve these relative paths. For example, upload `templates/index.html` into the server's `templates` folder, not beside `app.py`. The ZIP contents start at the application root, with no extra `release/` parent directory. The correct destination is the directory used by your existing WSGI configuration; do not create a second nested app folder.
@@ -49,3 +54,9 @@ Closing a tab, losing connectivity or backgrounding a phone is different from ta
 ## Installed phone apps
 
 The mobile Leave-confirmation fix and patched build dependency are in `release/mobile/`. Rebuild and reinstall the standalone Android/iPhone apps to receive these client changes. Uploading the Flask files updates the server and browser interface, not an already installed phone binary. Do not upload `mobile/`, `node_modules/`, local `instance/`, or local secrets to the PythonAnywhere application directory.
+
+## The /iloveyou surprise
+
+Send `/iloveyou` as a complete chat message to open the love video and letter for everyone currently in the room. Each participant can close their own surprise. Joining a room does not replay old commands. The clip attempts to play with sound; phone browsers that require a gesture show a **Play with sound** button. Other room audio is muted locally while the surprise is open and restored on close; shared play/pause state is not changed by the surprise.
+
+Upload all of the new `static/love*` files plus `static/media/for-jaanu.mp4`, the updated `static/style.css`, and `templates/index.html`. Preserve the `media/` subfolder. The video is included in both ZIPs. Native phones need a rebuilt app for the new command overlay; the video itself is served from the Flask server.

@@ -48,6 +48,23 @@ class WatchPartyTests(unittest.TestCase):
         self.assertEqual(len(state['members']), 2)
         self.assertEqual(state['queue'], [])
 
+    def test_love_command_is_shared_and_video_supports_phone_seeking(self):
+        sent=self.host.post(self.url,json={'action':'chat','body':'/iloveyou'})
+        self.assertEqual(sent.status_code,200)
+        messages=self.guest.get(self.url).json['messages']
+        self.assertEqual(messages[-1]['body'],'/iloveyou')
+        page=self.guest.get('/static/love.html')
+        self.assertEqual(page.status_code,200)
+        self.assertIn(b'You are my solace.',page.data)
+        self.assertIn(b'/static/media/for-jaanu.mp4',page.data)
+        response=self.guest.get('/static/media/for-jaanu.mp4',headers={'Range':'bytes=0-1023'})
+        try:
+            self.assertEqual(response.status_code,206)
+            self.assertEqual(response.mimetype,'video/mp4')
+            self.assertEqual(len(response.data),1024)
+            self.assertTrue(response.headers['Content-Range'].startswith('bytes 0-1023/'))
+        finally:response.close()
+
     def test_validation_and_access(self):
         self.assertEqual(self.guest.post(self.url, json={'action': 'playback', 'position': 99}).status_code, 403)
         self.assertEqual(self.host.post(self.url, json={'action': 'playback', 'position': 'bad'}).status_code, 400)

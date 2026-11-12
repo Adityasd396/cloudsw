@@ -1,5 +1,7 @@
 # Solace release — 12 November 2026
 
+- Added `/iloveyou`: a new chat command opens the supplied love video with floating hearts and a personal letter for Jaanu, on web and native clients. It plays with sound when the platform permits; otherwise one tap starts audible playback. The video is optimized for progressive delivery and bundled in the server ZIP. Existing chat commands are not replayed on join.
+
 - Renamed the visible web and native app branding to Solace, with “A place, comfort and peace” and “With love, made for Jaanu”. Saved preferences and installed-app identifiers are preserved.
 - Room Leave is transactional and idempotent. The final explicit Leave deletes the room and its messages, playlist, typing, presence and ad state while keeping saved display names.
 - Simultaneous final Leave requests and retries after lost responses are covered by regressions. Leaving hosts pass control to remaining members.
