@@ -18,7 +18,7 @@ const OBSERVER_SCRIPT = `(() => {
     const video = document.querySelector('video');
     if (!video || !window.ReactNativeWebView) return;
     const ad = Boolean(document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay'));
-    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
   };
   setInterval(send, 1000);
   send();

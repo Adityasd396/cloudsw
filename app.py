@@ -184,9 +184,11 @@ def browse_videos():
     query = request.args.get('q', '').strip()[:120]
     category = request.args.get('category', 'All')
     key = youtube_key()
+    if query and not key:
+        return jsonify(error='YouTube search has not been connected on this server. Ask the room owner to finish setup.', code='search_not_configured'),503
     if not query or not key:
         items = [item for item in FEATURED if (category == 'All' or item['category'] == category) and (not query or query.lower() in (item['title']+' '+item['channel']+' '+item['category']).lower())]
-        return jsonify(items=items, source='featured', search_enabled=bool(key), notice='Search is limited to the featured collection. Full YouTube search is not connected yet.' if query and not key else '')
+        return jsonify(items=items, source='featured', search_enabled=bool(key), notice='')
     token = request.args.get('page', '')[:200]
     cache_key = (query, token)
     with search_lock:
