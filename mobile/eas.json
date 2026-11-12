@@ -1,0 +1,17 @@
+{
+  "cli": {"version": ">= 16.0.0"},
+  "build": {
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {"buildType": "apk"},
+      "env": {"AFTERGLOW_RELEASE": "1"}
+    },
+    "production": {
+      "developmentClient": false,
+      "distribution": "store",
+      "android": {"buildType": "app-bundle"},
+      "env": {"AFTERGLOW_RELEASE": "1"}
+    }
+  }
+}

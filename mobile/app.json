@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Afterglow",
+    "slug": "afterglow-mobile",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "scheme": "afterglow",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.afterglow.watchtogether",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Connect to your Afterglow room server on the same Wi-Fi.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "package": "com.afterglow.watchtogether",
+      "usesCleartextTraffic": true
+    },
+    "plugins": [
+      "expo-status-bar"
+    ]
+  }
+}
