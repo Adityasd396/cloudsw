@@ -24,6 +24,6 @@ if(!displayName)api('/api/profile').then(profile=>{if(profile.name){displayName=
 if(!state)openSetup();
 
 const joinedNames=element('div','joined-names');document.querySelector('.chat').after(joinedNames);
-const memberRender=render;render=function(data){memberRender(data);joinedNames.textContent='In room · '+data.members.map(member=>member.name+(member.is_host?' (host)':'')).join(' · ')};
+const memberRender=render;render=function(data){memberRender(data)};
 const addLinkForm=element('form','inline-video-form');addLinkForm.innerHTML='<label class="sr-only" for="playlistLink">YouTube video link</label><input id="playlistLink" placeholder="Paste a YouTube video link…" required><button class="primary">Add video</button>';document.querySelector('.queue-section .section-heading').after(addLinkForm);
 addLinkForm.onsubmit=async event=>{event.preventDefault();if(!state){openSetup();return}const button=addLinkForm.querySelector('button');button.disabled=true;try{if(await action({action:'add',url:$('playlistLink').value}))$('playlistLink').value=''}finally{button.disabled=false}};

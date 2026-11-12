@@ -90,3 +90,15 @@ Connected rooms hide the header and use a fixed-screen video/chat layout with ac
 ## Minimal home and playback isolation
 
 The initial web and native home screens expose only Create room and Join room. Required setup fields appear after selecting an action. Native Leave room returns to the two-option home. Playback updates use a dedicated compact API response and an independent client request path; they do not queue behind chat sends or carry chat history. Video media comes directly from YouTube. Network round-trip time, shared bandwidth, buffering, server write contention, and geography can still affect synchronization; zero-latency or distance-independent playback is not guaranteed.
+
+
+## Shared control permissions
+
+Every joined participant can now play/pause, seek, select a video, add songs, advance, reorder, and remove playlist items. Unjoined callers are still rejected. A single internal clock publisher is retained to avoid competing automatic updates; this does not limit participant controls. Automatic clock samples include an expected state timestamp and are rejected if another participant changed playback since that state. Explicit user controls take priority over stale automatic samples.
+
+
+## Activity colors and long sessions
+
+Dots before each participant name use green for a current heartbeat (under 2.5 seconds), yellow for delayed updates (2.5–8 seconds), and red for explicit inactivity or no heartbeat for 8 seconds. Closing/backgrounding reports inactivity when the platform permits; abrupt network loss is detected by timeout. A quiet viewer with a healthy connection stays green.
+
+Long-session changes reduce heartbeat disk writes to at most once per second per participant, cap pending user commands at 12, and keep fetched chat history to the most recent 100 messages while retaining all messages in SQLite. Playback requests remain independent of chat commands. Automated tests cover a simulated three-hour timeline, saved history, shared controls, and presence transitions. This is not a real-time video soak test: continuous playback and recovery still require testing on real Android and iPhone devices and the chosen host. Network loss, platform suspension, hosting limits, and YouTube restrictions can interrupt playback.
