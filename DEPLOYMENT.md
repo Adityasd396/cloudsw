@@ -75,3 +75,8 @@ The web browser still uses YouTube's iframe player and remains subject to upload
 ## Simplified interface
 
 Room creation now asks only for a display name and generates a room code. Room names are no longer displayed or requested. The custom Explore YouTube section and all Add to playlist entry points have been removed. Existing saved playlists remain viewable and reorderable. On phones, YouTube browsing is still available inside the native YouTube view.
+
+
+## Chat and mobile controls update
+
+Chat and typing state refresh every 500 ms while active; network and server latency add to this interval. Video titles use 10px text. Joined participant names appear below the chat. Inline video-link entry is available in the playlist on both interfaces. The native toolbar also offers Add current video and Playlist, with up/down, play and remove controls for hosts. No modal dialogs are used for these actions. Installed phone builds must be rebuilt to receive this update.

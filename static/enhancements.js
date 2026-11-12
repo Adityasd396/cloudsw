@@ -15,7 +15,7 @@ const playerNotice=element('div','player-notice');playerNotice.id='playerNotice'
 playerNotice.innerHTML='<div><strong id="playerNoticeTitle"></strong><p id="playerNoticeText"></p></div><button class="subtle" id="retryYoutube">Retry player</button><a id="watchOnYoutube" class="subtle" target="_blank" rel="noopener">Open YouTube ↗</a>';
 document.querySelector('.player-wrap').after(playerNotice);
 function playbackNotice(title,message){$('playerNoticeTitle').textContent=title;$('playerNoticeText').textContent=message;$('watchOnYoutube').href='https://www.youtube.com/watch?v='+encodeURIComponent(state?.video||'');playerNotice.hidden=false}
-initPlayer=function(){if(player||!state)return;player=new YT.Player('player',{videoId:state.video,playerVars:{playsinline:1,rel:0,origin:location.origin},events:{
+initPlayer=function(){if(player||!state)return;player=new YT.Player('player',{videoId:state.video,playerVars:{playsinline:1,rel:0,controls:0,origin:location.origin},events:{
  onReady:()=>{ready=true;$('playerPlaceholder').style.display='none';playerNotice.hidden=true;synchronize(true)},
  onStateChange:event=>{if(event.data===1)playerNotice.hidden=true;if(!state?.is_host)return;if(event.data===0&&Date.now()>applyingUntil){action({action:'next'});return}if([1,2].includes(event.data))setTimeout(()=>{if(Date.now()>applyingUntil)publishPlayback()},800)},
  onAutoplayBlocked:()=>playbackNotice('Click the video to start','Your browser needs a click before playing sound. Use the play button in the video.'),
