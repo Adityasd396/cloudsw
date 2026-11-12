@@ -14,25 +14,30 @@ const OBSERVER_SCRIPT = `(() => {
   if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)) return;
   if (window.__afterglowObserver) return;
   window.__afterglowObserver = true;
+  const hooked=new WeakSet();
   const send = () => {
     const video = document.querySelector('video');
     if (!video || !window.ReactNativeWebView) return;
+    if(!hooked.has(video)){hooked.add(video);for(const event of ['play','pause','seeked'])video.addEventListener(event,send)}
+    if(!video.paused)window.__afterglowBlocked=false;
     const ad = Boolean(document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay'));
-    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,buffering:video.readyState<3,seeking:video.seeking,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
   };
   setInterval(send, 1000);
   send();
 })(); true;`;
-function buildApplyScript(position, playing) {
+function buildApplyScript(position, playing, force=false) {
   if (!Number.isFinite(position) || position < 0) throw new Error('Invalid playback position');
   return `(() => {
     if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)) return;
     if (document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay')) return;
     const video=document.querySelector('video');
     if (!video || video.readyState<2) return;
-    if (Number.isFinite(video.duration) && Math.abs(video.currentTime-${position})>3) video.currentTime=Math.min(${position},Math.max(0,video.duration-.1));
+    if (${Boolean(force)})window.__afterglowBlocked=false;
+    if (video.seeking)return;
+    if (Number.isFinite(video.duration) && (Math.abs(video.currentTime-${position})>1.25||${Boolean(force)})) video.currentTime=Math.min(${position},Math.max(0,video.duration-.1));
     if (${Boolean(playing)}) {
-      if(video.paused) {const promise=video.play();if(promise)promise.then(()=>window.__afterglowBlocked=false).catch(()=>window.__afterglowBlocked=true);}
+      if(video.paused&&!window.__afterglowPlayPending&&!window.__afterglowBlocked) {window.__afterglowPlayPending=true;try{const promise=video.play();if(promise)promise.then(()=>{window.__afterglowBlocked=false;window.__afterglowPlayPending=false}).catch(()=>{window.__afterglowBlocked=true;window.__afterglowPlayPending=false});else window.__afterglowPlayPending=false}catch{window.__afterglowPlayPending=false;window.__afterglowBlocked=true}}
     } else if (!video.paused) video.pause();
   })(); true;`;
 }

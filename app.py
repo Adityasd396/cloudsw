@@ -117,6 +117,8 @@ with app.app_context():
     CREATE TABLE IF NOT EXISTS queue(id INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT, video TEXT, title TEXT, added_by TEXT, sort_order INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY, name TEXT NOT NULL, updated REAL NOT NULL);
     CREATE TABLE IF NOT EXISTS typing(room TEXT, id TEXT, updated REAL NOT NULL, PRIMARY KEY(room,id));
+    CREATE TABLE IF NOT EXISTS presence(room TEXT,id TEXT,active INTEGER NOT NULL,PRIMARY KEY(room,id));
+    CREATE TABLE IF NOT EXISTS room_ads(room TEXT PRIMARY KEY,active INTEGER NOT NULL,updated REAL NOT NULL);
     CREATE INDEX IF NOT EXISTS message_room_idx ON messages(room,id);
     ''')
     if 'sort_order' not in {column['name'] for column in db().execute('PRAGMA table_info(queue)')}:
@@ -184,6 +186,8 @@ def browse_videos():
     query = request.args.get('q', '').strip()[:120]
     category = request.args.get('category', 'All')
     key = youtube_key()
+    if query and not key:
+        return jsonify(error='YouTube search has not been connected on this server.',code='search_not_configured'),503
     if not query or not key:
         items = [item for item in FEATURED if (category == 'All' or item['category'] == category) and (not query or query.lower() in (item['title']+' '+item['channel']+' '+item['category']).lower())]
         return jsonify(items=items, source='featured', search_enabled=bool(key), notice='Search is limited to the featured collection. Full YouTube search is not connected yet.' if query and not key else '')
@@ -239,11 +243,15 @@ def room(room_id):
         if action == 'join':
             db().execute('INSERT INTO members VALUES(?,?,?,?) ON CONFLICT(room,id) DO UPDATE SET name=excluded.name,seen=excluded.seen', (room_id,session['uid'],name,now))
             db().execute('INSERT INTO profiles VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated=excluded.updated',(session['uid'],name,now))
+            db().execute('INSERT INTO presence VALUES(?,?,1) ON CONFLICT(room,id) DO UPDATE SET active=1',(room_id,session['uid']))
         else:
             member = db().execute('SELECT * FROM members WHERE room=? AND id=?', (room_id,session['uid'])).fetchone()
             if not member:
                 return jsonify(error='Join the room first.'), 403
-            if action == 'typing':
+            if action == 'ad_status':
+                if room['host']!=session['uid']:return jsonify(error='Only the host can report player status.'),403
+                db().execute('INSERT INTO room_ads VALUES(?,?,?) ON CONFLICT(room) DO UPDATE SET active=excluded.active,updated=excluded.updated',(room_id,int(bool(data.get('active'))),now))
+            elif action == 'typing':
                 if data.get('active'):
                     db().execute('INSERT INTO typing VALUES(?,?,?) ON CONFLICT(room,id) DO UPDATE SET updated=excluded.updated',(room_id,session['uid'],now))
                 else:
@@ -291,12 +299,17 @@ def room(room_id):
                     if not target:
                         return jsonify(error='That participant is no longer connected.'),400
                     db().execute('UPDATE rooms SET host=? WHERE id=?',(target['id'],room_id))
+                    db().execute('DELETE FROM room_ads WHERE room=?',(room_id,))
                 elif action == 'watch':
                     video = video_id(data.get('url',''))
                     if not video:
                         return jsonify(error='Enter a valid YouTube video.'),400
                     db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=? WHERE id=?',(video,now,room_id))
                 elif action == 'playback':
+                    if 'expected_updated' in data:
+                        db().execute('BEGIN IMMEDIATE')
+                        latest=db().execute('SELECT updated FROM rooms WHERE id=?',(room_id,)).fetchone()
+                        if data['expected_updated']!=latest['updated']:return jsonify(error='Playback changed. Refresh room state.',code='stale_playback'),409
                     try:
                         position = float(data.get('position',0))
                         if not math.isfinite(position):
@@ -318,26 +331,45 @@ def room(room_id):
             else:
                 return jsonify(error='Unknown action.'),400
         db().commit()
-    db().execute('UPDATE members SET seen=? WHERE room=? AND id=?',(now,room_id,session['uid']))
+    db().execute('UPDATE members SET seen=? WHERE room=? AND id=? AND seen<?',(now,room_id,session['uid'],now-1))
     db().commit()
     if request.method == 'POST' and data.get('action') == 'playback' and data.get('compact'):
         return jsonify(ok=True)
     room = dict(db().execute('SELECT * FROM rooms WHERE id=?',(room_id,)).fetchone())
     host_id = room.pop('host')
     room['is_host'] = host_id == session['uid']
+    room['can_control']=room['is_host']
+    ad=db().execute('SELECT active,updated FROM room_ads WHERE room=?',(room_id,)).fetchone()
+    room['host_ad']=bool(ad and ad['active'] and now-ad['updated']<10)
     host = db().execute('SELECT seen FROM members WHERE room=? AND id=?',(room_id,host_id)).fetchone()
     room['can_claim_host'] = not host or now-host['seen'] >= 30
     room['server_time'] = now
-    room['members'] = [dict(x) for x in db().execute('SELECT name,id FROM members WHERE room=? AND seen>?',(room_id,now-20))]
+    room['members']=[dict(x) for x in db().execute('SELECT members.name,members.id,members.seen,COALESCE(presence.active,1) AS presence_active FROM members LEFT JOIN presence ON members.room=presence.room AND members.id=presence.id WHERE members.room=? ORDER BY members.seen DESC LIMIT 100',(room_id,))]
     for member in room['members']:
         member['you'] = member['id'] == session['uid']
         member['is_host'] = member['id'] == host_id
         # Member IDs are room-scoped opaque values, never session credentials.
         member['member_id'] = hashlib.sha256((room_id+member.pop('id')).encode()).hexdigest()[:20]
+        age=max(0,now-member.pop('seen'))
+        available=bool(member.pop('presence_active'))
+        member['status']='inactive' if not available or age>=8 else 'reconnecting' if age>=2.5 else 'active'
+        member['active']=member['status']!='inactive'
+    room['participants']=room['members']
+    room['members']=[member for member in room['participants'] if member['active']]
     room['messages'] = list(reversed([dict(x) for x in db().execute('SELECT id,name,body,created FROM messages WHERE room=? ORDER BY id DESC LIMIT 100',(room_id,))]))
     room['typing'] = [row['name'] for row in db().execute('SELECT members.name FROM typing JOIN members ON typing.room=members.room AND typing.id=members.id WHERE typing.room=? AND typing.id<>? AND typing.updated>? AND members.seen>?',(room_id,session['uid'],now-4,now-20))]
     room['queue'] = [dict(x) for x in db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,))]
     return jsonify(room)
+
+@app.post('/api/rooms/<room_id>/presence')
+def room_presence(room_id):
+    if not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
+    active=bool((request.get_json(silent=True) or {}).get('active'))
+    db().execute('INSERT INTO presence VALUES(?,?,?) ON CONFLICT(room,id) DO UPDATE SET active=excluded.active',(room_id,session['uid'],int(active)))
+    if active:db().execute('UPDATE members SET seen=? WHERE room=? AND id=?',(time.time(),room_id,session['uid']))
+    else:db().execute('DELETE FROM typing WHERE room=? AND id=?',(room_id,session['uid']))
+    db().commit()
+    return jsonify(ok=True)
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=int(os.environ.get('PORT', '8000')), debug=False)

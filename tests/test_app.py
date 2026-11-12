@@ -197,6 +197,15 @@ class WatchPartyTests(unittest.TestCase):
         self.assertTrue(self.guest.get(self.url).json['can_control'])
         self.assertFalse(self.host.get(self.url).json['can_control'])
 
+    def test_old_pause_sample_cannot_override_confirmed_resume(self):
+        paused=self.host.post(self.url,json={'action':'playback','position':50,'playing':False}).json
+        self.host.post(self.url,json={'action':'playback','position':50,'playing':True})
+        old=self.host.post(self.url,json={'action':'playback','position':50,'playing':False,'expected_updated':paused['updated'],'compact':True})
+        self.assertEqual(old.status_code,409)
+        state=self.guest.get(self.url).json
+        self.assertEqual(state['playing'],1)
+        self.assertEqual(state['position'],50)
+
     def test_presence_green_yellow_red_thresholds(self):
         import time
         from unittest.mock import patch
