@@ -101,3 +101,5 @@ Upload the new `static/session.js` and `static/player-overlay.js` together with 
 ## Love hoops update
 
 Upload the complete server ZIP so `app.py`, `room_game.py`, `static/game.html`, `static/basketball.js`, `static/basketball.css`, `static/tictactoe.html`, the updated website files and template stay together. Existing game tables are reused; no manual database migration is needed. The health capability list now includes `basketball_v1`. See CUTE-UPDATE-REPORT.md for portrait/landscape and two-user smoke results.
+
+For the latest chat update, upload `static/chat-scroll.js` with the packaged `static/style.css` and `templates/index.html`. The template references the new helper. Use the complete server ZIP, reload, then refresh the phone browser to load the updated asset versions.

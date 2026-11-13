@@ -1,5 +1,7 @@
 # Solace release — 13 November 2026
 
+Chat layout update: portrait video activity chips are hidden while landscape retains them. Short chats align toward the composer, empty typing space is removed, and scrolling follows new messages, typing focus and keyboard/viewport resizing. Verified incoming chat from a second browser without losing the draft; the latest bubble stayed visible with a roughly four-pixel gap to the composer in a resized keyboard layout.
+
 Cute update: added two-player Love hoops basketball with shared scores, turns, first-to-five rounds and a love-goal popup. Softened website colors and trimmed repeated welcome/playlist copy. The love command is unchanged. Portrait/landscape and two-browser playback smoke checks passed. See CUTE-UPDATE-REPORT.md for current results: 45 backend tests, 55 HTTP smoke assertions and 31 client regressions.
 
 Latest update: portrait playback controls remain visible in a compact row below the video. Landscape controls float over the video and hide after three seconds. Playback controls are hidden while selecting songs, so search and queue management stay unobstructed. Landscape supports full-viewport viewing. Improved recovery after backgrounding, renderer restarts and transient play failures, independent chat polling, incremental chat responses, and foreground screen wakefulness. Accelerated three-hour replay passed; actual phone soak remains unverified. See LONG-SESSION-REPORT.md.

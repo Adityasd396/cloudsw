@@ -20,3 +20,11 @@ Browser evidence: love-goal-popup.jpg, love-hoops-landscape.jpg, cute-portrait-p
 ## Upload
 
 Use Solace-pythonanywhere.zip. Replace the packaged server modules and entire static/ and templates/ folders in the existing application directory; preserve instance/ and reload PythonAnywhere. New files include static/basketball.js, static/basketball.css and static/tictactoe.html. Upload room_game.py with app.py. Solace-release-source.zip includes source, tests and reports. Neither ZIP includes private databases, passwords or API keys.
+
+## Portrait activity and latest-message follow-up
+
+The activity overlay directly over the video is hidden in portrait and visible in landscape. Footer names remain available in the normal portrait room. Chat now follows message mutations after reply buttons and bubble layout finish, and follows input focus/input events plus visual viewport and chat-size changes. Short conversations align toward the composer; bubbles do not shrink or clip, the last bubble has no trailing margin, and an empty typing indicator takes no height.
+
+Actual browser checks used 390×844 portrait, a 390×500 resized keyboard layout and 844×390 landscape. The newest message stayed visible after typing and resizing (scroll remainder below one pixel). The keyboard layout measured a 4.1-pixel bubble-to-composer gap and the composer ended at the 500-pixel viewport edge. A second independent browser sent an incoming message; the first browser displayed it at the bottom while retaining its unsent draft. Portrait overlay computed display:none; landscape computed display:flex with both names. The rapid dummy-message test encountered the existing send-rate limit; a retry after the limit interval succeeded and the draft was preserved. No change to that rate limit was made.
+
+All 55 real-HTTP smoke assertions passed with the updated template and new script; JavaScript syntax checking passed. No physical phone keyboard was available; viewport resizing tests the layout rather than the device keyboard itself. Screenshots: chat-keyboard-layout.jpg, chat-portrait-latest.jpg and chat-landscape-activity.jpg. The new static/chat-scroll.js must be uploaded with the updated template and stylesheet.

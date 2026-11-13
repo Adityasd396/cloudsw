@@ -101,3 +101,15 @@ body:has(.video-selection:not([hidden])) .video-stage .player-touch-surface{disp
 .room-connected .chat #chatForm{border-top-color:#e8bdd014}.room-connected .joined-names{background:#141019;border-top-color:#e8bdd00d}
 #messages .chat-message.message-mine>div:not(.mini-avatar){background:#3a2b43}.room-connected .subtle{border-color:#e5bed513}.chat-banner,.chat-footer,.tip{display:none!important}
 .chat-empty:empty{display:none}.room-connected .video-stage .compact-player-controls button{border-radius:12px}
+
+/* Keep the portrait picture clear; names remain in the room footer. */
+@media(orientation:portrait){.room-connected .video-stage>.presence-overlay{display:none!important}}
+/* Bottom-align short conversations and leave only a small composer gap. */
+.room-connected .chat #messages{display:flex;flex-direction:column;gap:8px;padding:5px 0 4px;overflow-anchor:none}
+.room-connected .chat #messages::before{content:'';margin-top:auto}
+.room-connected .chat #messages>.chat-message{flex-shrink:0;margin-bottom:0}
+.room-connected .chat .typing-line{flex-shrink:0;height:18px;margin:0;padding:0}
+.room-connected .chat .typing-line:empty{display:none}
+.room-connected .chat #chatForm{flex-shrink:0;padding:5px 0 6px}
+.keyboard-open.room-connected main{height:var(--room-vh,100dvh)!important}
+.keyboard-open.room-connected .watch>.chat{min-height:0}
