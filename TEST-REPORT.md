@@ -1,3 +1,5 @@
+> Historical report: the current source release is documented in ROOM-EXPERIENCE-REPORT.md.
+
 # Validation report — 12 November 2026
 
 **Result: local automated checks pass; the hosted deployment has a room-deletion defect. Device acceptance testing remains open.**

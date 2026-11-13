@@ -18,7 +18,7 @@ const OBSERVER_SCRIPT = `(() => {
   const send = () => {
     const video = document.querySelector('video');
     if (!video || !window.ReactNativeWebView) return;
-    if(!hooked.has(video)){hooked.add(video);for(const event of ['play','pause','seeked'])video.addEventListener(event,send)}
+    if(!hooked.has(video)){hooked.add(video);for(const event of ['play','pause','seeked','ended'])video.addEventListener(event,send)}
     if(!video.paused)window.__afterglowBlocked=false;
     const ad = Boolean(document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay'));
     window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,buffering:video.readyState<3,seeking:video.seeking,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));

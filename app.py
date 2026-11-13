@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 from urllib.parse import urlparse, parse_qs, urlencode
 from flask import Flask, g, jsonify, render_template, request, session
+from flask.sessions import SecureCookieSessionInterface
 
 app = Flask(__name__)
 Path(app.instance_path).mkdir(exist_ok=True)
@@ -22,6 +23,15 @@ if not key_file.exists():
     key_file.write_text(secrets.token_hex(32))
 app.secret_key = os.environ.get('SECRET_KEY') or key_file.read_text()
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', MAX_CONTENT_LENGTH=16384, PERMANENT_SESSION_LIFETIME=timedelta(days=365))
+
+class HttpsSessionInterface(SecureCookieSessionInterface):
+    def get_cookie_secure(self, application):
+        return request.is_secure or super().get_cookie_secure(application)
+
+app.session_interface=HttpsSessionInterface()
+from admin_panel import register_admin
+register_admin(app)
+
 
 
 def youtube_key():
@@ -124,6 +134,15 @@ with app.app_context():
     if 'sort_order' not in {column['name'] for column in db().execute('PRAGMA table_info(queue)')}:
         db().execute('ALTER TABLE queue ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0')
         db().execute('UPDATE queue SET sort_order=id')
+    if 'sender' not in {column['name'] for column in db().execute('PRAGMA table_info(messages)')}:
+        db().execute('ALTER TABLE messages ADD COLUMN sender TEXT')
+    if 'playback_id' not in {column['name'] for column in db().execute('PRAGMA table_info(rooms)')}:
+        db().execute("ALTER TABLE rooms ADD COLUMN playback_id TEXT NOT NULL DEFAULT ''")
+        db().execute('UPDATE rooms SET playback_id=lower(hex(randomblob(12)))')
+    if 'reply_to' not in {column['name'] for column in db().execute('PRAGMA table_info(messages)')}:
+        db().execute('ALTER TABLE messages ADD COLUMN reply_to INTEGER')
+    db().execute('CREATE TABLE IF NOT EXISTS participant_ads(room TEXT,id TEXT,active INTEGER NOT NULL,updated REAL NOT NULL,started REAL NOT NULL,PRIMARY KEY(room,id))')
+    db().execute('CREATE TABLE IF NOT EXISTS room_games(room TEXT PRIMARY KEY,state TEXT NOT NULL)')
     db().commit()
 
 @app.before_request
@@ -140,7 +159,7 @@ def identity():
 
 
 def delete_room_records(room_id):
-    for table in ('messages','queue','typing','presence','room_ads','members'):
+    for table in ('messages','queue','typing','presence','room_ads','participant_ads','room_games','members'):
         db().execute(f'DELETE FROM {table} WHERE room=?',(room_id,))
     db().execute('DELETE FROM rooms WHERE id=?',(room_id,))
 
@@ -182,7 +201,7 @@ def index():
 
 @app.get('/api/health')
 def health():
-    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2'])
+    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2','shared_playback_v3','tictactoe_v1','chat_identity_v1','room_experience_v4'])
 
 
 @app.get('/api/profile')
@@ -241,7 +260,7 @@ def create_room():
     for _ in range(20):
         room_id = str(secrets.randbelow(900000)+100000)
         try:
-            db().execute('INSERT INTO rooms(id,name,host,video,updated) VALUES(?,?,?,?,?)', (room_id,name,session['uid'],'aqz-KE-bpKQ',time.time()))
+            db().execute('INSERT INTO rooms(id,name,host,video,updated,playback_id) VALUES(?,?,?,?,?,?)', (room_id,name,session['uid'],'aqz-KE-bpKQ',time.time(),secrets.token_hex(12)))
             break
         except sqlite3.IntegrityError:
             continue
@@ -269,8 +288,10 @@ def room(room_id):
             if not member:
                 return jsonify(error='Join the room first.'), 403
             if action == 'ad_status':
-                if room['host']!=session['uid']:return jsonify(error='Only the host can report player status.'),403
-                db().execute('INSERT INTO room_ads VALUES(?,?,?) ON CONFLICT(room) DO UPDATE SET active=excluded.active,updated=excluded.updated',(room_id,int(bool(data.get('active'))),now))
+                active=int(bool(data.get('active')))
+                db().execute('INSERT INTO participant_ads VALUES(?,?,?,?,?) ON CONFLICT(room,id) DO UPDATE SET active=excluded.active,updated=excluded.updated,started=CASE WHEN excluded.active=1 AND (participant_ads.active=0 OR participant_ads.updated<excluded.updated-10) THEN excluded.started ELSE participant_ads.started END',(room_id,session['uid'],active,now,now))
+                if room['host']==session['uid']:
+                    db().execute('INSERT INTO room_ads VALUES(?,?,?) ON CONFLICT(room) DO UPDATE SET active=excluded.active,updated=excluded.updated',(room_id,active,now))
             elif action == 'typing':
                 if data.get('active'):
                     db().execute('INSERT INTO typing VALUES(?,?,?) ON CONFLICT(room,id) DO UPDATE SET updated=excluded.updated',(room_id,session['uid'],now))
@@ -280,10 +301,13 @@ def room(room_id):
                 body = str(data.get('body', '')).strip()[:500]
                 if not body:
                     return jsonify(error='Write a message first.'), 400
-                recent = db().execute('SELECT created FROM messages WHERE room=? AND name=? ORDER BY id DESC LIMIT 1', (room_id,member['name'])).fetchone()
+                recent = db().execute('SELECT created FROM messages WHERE room=? AND sender=? ORDER BY id DESC LIMIT 1', (room_id,session['uid'])).fetchone()
                 if recent and now-recent['created'] < .5:
                     return jsonify(error='Please wait a moment before sending again.'), 429
-                db().execute('INSERT INTO messages(room,name,body,created) VALUES(?,?,?,?)', (room_id,member['name'],body,now))
+                reply=data.get('reply_to')
+                if reply is not None and (type(reply) is not int or not db().execute('SELECT 1 FROM messages WHERE room=? AND id=?',(room_id,reply)).fetchone()):
+                    return jsonify(error='That reply is not available in this room.'),400
+                db().execute('INSERT INTO messages(room,name,body,created,sender,reply_to) VALUES(?,?,?,?,?,?)', (room_id,member['name'],body,now,session['uid'],reply))
                 db().execute('DELETE FROM typing WHERE room=? AND id=?',(room_id,session['uid']))
             elif action == 'add':
                 video = video_id(data.get('url', ''))
@@ -298,8 +322,8 @@ def room(room_id):
                     return jsonify(error='The host is still connected.'),409
                 db().execute('UPDATE rooms SET host=? WHERE id=?',(session['uid'],room_id))
             elif action in ('playback','next','select','remove','watch','transfer_host','move'):
-                if room['host'] != session['uid']:
-                    return jsonify(error='Only the host can control playback.'), 403
+                if action=='transfer_host' and room['host'] != session['uid']:
+                    return jsonify(error='Only the host can transfer hosting.'), 403
                 if action == 'move':
                     direction = data.get('direction')
                     if direction not in ('up','down'):
@@ -324,7 +348,7 @@ def room(room_id):
                     video = video_id(data.get('url',''))
                     if not video:
                         return jsonify(error='Enter a valid YouTube video.'),400
-                    db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=? WHERE id=?',(video,now,room_id))
+                    db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=?,playback_id=? WHERE id=?',(video,now,secrets.token_hex(12),room_id))
                 elif action == 'playback':
                     if 'expected_updated' in data:
                         db().execute('BEGIN IMMEDIATE')
@@ -339,28 +363,37 @@ def room(room_id):
                         return jsonify(error='Invalid playback position.'),400
                     db().execute('UPDATE rooms SET position=?,playing=?,updated=? WHERE id=?',(position,int(bool(data.get('playing'))),now,room_id))
                 else:
+                    if action=='next':
+                        db().execute('BEGIN IMMEDIATE')
+                        latest=db().execute('SELECT playback_id FROM rooms WHERE id=?',(room_id,)).fetchone()
+                        if not latest or ('expected_playback_id' in data and data['expected_playback_id']!=latest['playback_id']):
+                            return jsonify(error='The queue has already advanced.',code='stale_playback'),409
                     item = db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id LIMIT 1',(room_id,)).fetchone() if action == 'next' else db().execute('SELECT * FROM queue WHERE room=? AND id=?',(room_id,data.get('id'))).fetchone()
                     if item:
                         if action != 'remove':
-                            db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=? WHERE id=?',(item['video'],now,room_id))
+                            db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=?,playback_id=? WHERE id=?',(item['video'],now,secrets.token_hex(12),room_id))
                         db().execute('DELETE FROM queue WHERE id=?',(item['id'],))
                     elif action != 'next':
                         return jsonify(error='That playlist item has already been removed.'),404
                     else:
-                        db().execute('UPDATE rooms SET playing=0,updated=? WHERE id=?',(now,room_id))
+                        db().execute('UPDATE rooms SET playing=0,updated=?,playback_id=? WHERE id=?',(now,secrets.token_hex(12),room_id))
             else:
                 return jsonify(error='Unknown action.'),400
         db().commit()
     db().execute('UPDATE members SET seen=? WHERE room=? AND id=? AND seen<?',(now,room_id,session['uid'],now-1))
     db().commit()
     if request.method == 'POST' and data.get('action') == 'playback' and data.get('compact'):
-        return jsonify(ok=True)
+        clock=db().execute('SELECT updated,playback_id FROM rooms WHERE id=?',(room_id,)).fetchone()
+        if not clock:return jsonify(error='Room not found.'),404
+        return jsonify(ok=True,updated=clock['updated'],playback_id=clock['playback_id'])
     room = dict(db().execute('SELECT * FROM rooms WHERE id=?',(room_id,)).fetchone())
     host_id = room.pop('host')
     room['is_host'] = host_id == session['uid']
-    room['can_control']=room['is_host']
+    room['can_control']=bool(db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone())
     ad=db().execute('SELECT active,updated FROM room_ads WHERE room=?',(room_id,)).fetchone()
     room['host_ad']=bool(ad and ad['active'] and now-ad['updated']<10)
+    room['ad_alerts']=[{'member_id':hashlib.sha256((room_id+row['id']).encode()).hexdigest()[:20],'name':row['name'],'you':row['id']==session['uid'],'started':row['started']} for row in db().execute('SELECT a.id,m.name,a.started FROM participant_ads a JOIN members m ON a.room=m.room AND a.id=m.id WHERE a.room=? AND a.active=1 AND a.updated>?',(room_id,now-10))]
+
     host = db().execute('SELECT seen FROM members WHERE room=? AND id=?',(room_id,host_id)).fetchone()
     room['can_claim_host'] = not host or now-host['seen'] >= 30
     room['server_time'] = now
@@ -376,7 +409,14 @@ def room(room_id):
         member['active']=member['status']!='inactive'
     room['participants']=room['members']
     room['members']=[member for member in room['participants'] if member['active']]
-    room['messages'] = list(reversed([dict(x) for x in db().execute('SELECT id,name,body,created FROM messages WHERE room=? ORDER BY id DESC LIMIT 100',(room_id,))]))
+    room['messages'] = list(reversed([dict(x) for x in db().execute('SELECT m.id,m.name,m.body,m.created,m.sender,r.id AS reply_id,r.name AS reply_name,r.body AS reply_body FROM messages m LEFT JOIN messages r ON r.room=m.room AND r.id=m.reply_to WHERE m.room=? ORDER BY m.id DESC LIMIT 100',(room_id,))]))
+    for message in room['messages']:
+        sender=message.pop('sender')
+        message['you']=sender==session['uid']
+        message['is_host']=sender==host_id
+        reply_id=message.pop('reply_id');reply_name=message.pop('reply_name');reply_body=message.pop('reply_body')
+        message['reply']={'id':reply_id,'name':reply_name,'body':reply_body[:160]} if reply_id else None
+        message['sender_id']=hashlib.sha256((room_id+(sender or message['name'])).encode()).hexdigest()[:16]
     room['typing'] = [row['name'] for row in db().execute('SELECT members.name FROM typing JOIN members ON typing.room=members.room AND typing.id=members.id WHERE typing.room=? AND typing.id<>? AND typing.updated>? AND members.seen>?',(room_id,session['uid'],now-4,now-20))]
     room['queue'] = [dict(x) for x in db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,))]
     return jsonify(room)
@@ -402,8 +442,10 @@ def leave_room(room_id):
     if not member:
         db().rollback()
         return jsonify(ok=True,room_deleted=False)
-    for table in ('members','presence','typing'):
+    for table in ('members','presence','typing','participant_ads'):
         db().execute(f'DELETE FROM {table} WHERE room=? AND id=?',(room_id,session['uid']))
+    game=db().execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
+    if game and session['uid'] in json.loads(game['state'])['players'].values():db().execute('DELETE FROM room_games WHERE room=?',(room_id,))
     empty=not db().execute('SELECT 1 FROM members WHERE room=? LIMIT 1',(room_id,)).fetchone()
     if empty:delete_room_records(room_id)
     else:
@@ -414,6 +456,9 @@ def leave_room(room_id):
             db().execute('DELETE FROM room_ads WHERE room=?',(room_id,))
     db().commit()
     return jsonify(ok=True,room_deleted=empty)
+
+from room_game import register_game
+register_game(app,db)
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=int(os.environ.get('PORT', '8000')), debug=False)

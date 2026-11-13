@@ -32,3 +32,16 @@ test('page filter blocks ad fetches and removes only ad fields from player respo
  const untouched=await context.window.fetch('https://m.youtube.com/youtubei/v1/browse');
  assert.deepEqual((await untouched.json()).adSlots,originalData.adSlots);
 });
+
+test('initial JSON and XHR ad fields are removed while video content survives',()=>{
+ const payload={adPlacements:[{}],adBreakHeartbeatParams:{},videoDetails:{videoId:'aqz-KE-bpKQ'},streamingData:{formats:[{url:'content'}]}};
+ function XHR(){this.readyState=4;this.body=JSON.stringify(payload)}
+ XHR.prototype.open=function(){};
+ for(const key of ['response','responseText'])Object.defineProperty(XHR.prototype,key,{configurable:true,get(){return this.body}});
+ const context={location:{hostname:'m.youtube.com',href:'https://m.youtube.com/'},URL,Response,Headers,setInterval(){},document:{head:null},window:{JSON:{parse:JSON.parse},XMLHttpRequest:XHR}};
+ vm.runInNewContext(BLOCKER_SCRIPT,context);
+ const initial=context.window.JSON.parse(JSON.stringify(payload));assert.equal(initial.adPlacements,undefined);assert.deepEqual(initial.streamingData,payload.streamingData);
+ const player=new XHR();player.open('POST','/youtubei/v1/player');assert.equal(JSON.parse(player.responseText).adPlacements,undefined);
+ const other=new XHR();other.open('POST','/youtubei/v1/browse');assert.deepEqual(JSON.parse(other.responseText).adPlacements,[{}]);
+ for(const url of ['https://imasdk.googleapis.com/js/sdkloader/ima3.js','https://ads.youtube.com/a'])assert.equal(shouldBlock(url),true);
+});

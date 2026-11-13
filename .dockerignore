@@ -6,3 +6,8 @@
 !templates/**
 !static/
 !static/**
+
+!room_game.py
+
+!admin_panel.py
+!setup_admin.py

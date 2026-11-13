@@ -106,7 +106,7 @@ Long-session changes reduce heartbeat disk writes to at most once per second per
 
 ## Creator-host and streamlined room update
 
-The creator is now the controlling host; guests can add videos, while playback, seeking, queue management, and host transfer are host-only. Tap an active participant name to transfer hosting. The room code plus Share link and Invite friends are visible at the bottom. Create room asks only for a display name and a create button. The emoji reaction strip is hidden; typed emoji (including flags, skin tones, joined sequences, and keycaps) animate on receipt.
+Every joined participant can now control playback, seek, add videos and manage the queue. The creator remains the host for host transfer and clock/ad reporting. Tap an active participant name to transfer hosting. The room code plus Share link and Invite friends are visible at the bottom. Create room asks only for a display name and a create button. The emoji reaction strip is hidden; typed emoji (including flags, skin tones, joined sequences, and keycaps) animate on receipt.
 
 The resume fix prevents host polling from enforcing an older paused state on the local host player. Guests follow the shared state. Host-ad notices rely on the native full-site observer detecting known ad indicators; the YouTube iframe API does not provide reliable ad detection, so browser-host ads cannot be reliably announced. Notices expire after ten seconds without renewal. Input font sizing avoids common iPhone focus-zoom behavior without disabling user-controlled pinch zoom. Real iPhone/Android player behavior still needs device verification.
 
@@ -119,3 +119,8 @@ Deliberate play/pause/seek commands take priority over observer samples for thre
 ## Empty-room lifecycle
 
 The Leave button removes the current participant. When the last participant explicitly leaves, the room, messages, queue, typing, presence, and ad-status records are deleted transactionally. Saved display-name profiles remain. If the host leaves while others remain, hosting passes to a remaining participant. Backgrounding, refresh, and closing only report inactivity; they do not immediately erase the room. If every participant stops sending heartbeats, the room expires after two minutes and is cleaned on the next API request. Reconnecting within the grace window preserves it. Clients return to the home screen when an expired room returns 404.
+
+
+## Solace shared-playback/game update
+
+See PYTHONANYWHERE.md and UPDATE-REPORT.md for the 13 November update. Upload room_game.py beside app.py and replace static/ and templates/ together. Rebuild installed phone apps for shared controls, sender bubbles, game UI and stronger native filters. The queue is inside Add to playlist below search. The website cannot apply native ad filters to YouTube iframe traffic.

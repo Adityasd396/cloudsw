@@ -8,6 +8,9 @@ Copy these from `release/` into the **existing application directory** on Python
 
 ```text
 app.py
+room_game.py
+admin_panel.py
+setup_admin.py
 requirements.txt
 templates/index.html
 static/app.js
@@ -20,6 +23,16 @@ static/love.css
 static/love.js
 static/love-film.js
 static/media/for-jaanu.mp4
+static/fullscreen.js
+static/game.html
+static/game.css
+static/game.js
+static/game-launcher.js
+static/room-experience.js
+static/admin.css
+static/admin.js
+templates/admin.html
+templates/admin-login.html
 ```
 
 Preserve these relative paths. For example, upload `templates/index.html` into the server's `templates` folder, not beside `app.py`. The ZIP contents start at the application root, with no extra `release/` parent directory. The correct destination is the directory used by your existing WSGI configuration; do not create a second nested app folder.
@@ -47,6 +60,8 @@ Open https://aditya211.pythonanywhere.com/api/health . Its response must include
 
 If this field is missing, the old backend is still running. Recheck the upload directory, WSGI import and Reload step.
 
+The latest shared-controls/game release also includes `shared_playback_v3`, `tictactoe_v1` and `chat_identity_v1` in `capabilities`. Upload **room_game.py beside app.py**; the backend imports it. Upload the entire packaged `static/` and `templates/` folders together, then reload. Missing the new module will prevent the server from importing. New database columns and the game table are created automatically; keep the existing instance directory.
+
 Create a new room and join from a second device. Leaving on the first device must preserve the other participant's room. Leaving on the last device must delete it; opening the old invitation should then report that the room is not found. Retrying Leave is safe.
 
 Closing a tab, losing connectivity or backgrounding a phone is different from tapping Leave. Abandoned rooms have a two-minute reconnect grace period and are removed on the next API request after expiry. Immediate deletion applies to the final explicit Leave.
@@ -54,6 +69,22 @@ Closing a tab, losing connectivity or backgrounding a phone is different from ta
 ## Installed phone apps
 
 The mobile Leave-confirmation fix and patched build dependency are in `release/mobile/`. Rebuild and reinstall the standalone Android/iPhone apps to receive these client changes. Uploading the Flask files updates the server and browser interface, not an already installed phone binary. Do not upload `mobile/`, `node_modules/`, local `instance/`, or local secrets to the PythonAnywhere application directory.
+
+## Shared controls, playlist and game update
+
+Every joined participant can play, pause, seek, select/advance videos and manage the queue. The creator remains the room host for host transfer and clock/ad reporting. Automatic song-end requests use a playback-instance identifier, so simultaneous reports cannot consume two playlist entries, including when the same video appears twice.
+
+The browser fullscreen button has an in-page fitted fallback when Safari cannot grant element fullscreen; this fallback fills the available browser viewport and keeps an exit control. It cannot hide browser chrome where the platform does not permit it. The native app retains its fullscreen layout.
+
+Add to playlist now contains the manageable queue below search. The Play together/Game button opens a two-player tic-tac-toe board; spectators can watch, and moves synchronize through the server. Game state is removed with the room. New chat messages carry room-scoped sender identities, so your messages align right and incoming messages left, with consistent name colors. Older saved messages without sender identities remain readable as incoming history.
+
+The rebuilt native apps have expanded domain filters, player-response JSON/XHR/fetch cleaning, sponsored-slot removal and faster available-Skip handling. They preserve video media and login endpoints. These filters cannot run inside the website's cross-origin YouTube iframe and do not guarantee zero YouTube ads. Both native platforms require rebuilding for the filter changes.
+
+## Room experience and private stats update
+
+Upload **all** current server ZIP files, including `admin_panel.py` (imported by the app), `setup_admin.py`, the three templates and the updated static files. The backend creates new reply/ad tables and columns automatically. The private panel stays disabled until you choose a server-side password using `python setup_admin.py`; follow `ADMIN-SETUP.md` for the hidden URL, PythonAnywhere IP setting and 30-day retention behavior.
+
+The room update adds swipe/hold replies, host crowns, participant activity chips, temporary landscape/fullscreen chat bubbles, keyboard fitting and back-navigation guards. In-app ad alerts can come from any participant: the native phone observer reports detected ads automatically; web participants use the **Ad playing / Ad ended** button because the embedded player cannot reliably expose ad state. These are in-app overlays only, not iOS/Android push notifications. Installed phone apps need rebuilding.
 
 ## The /iloveyou surprise
 

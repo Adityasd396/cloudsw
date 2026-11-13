@@ -57,7 +57,7 @@ def local_checks():
             record('local-security',f'Unjoined caller cannot {action}',response.status_code==403)
         profile=fixture.host.get('/api/profile')
         record('local-security','Session cookie has HttpOnly and SameSite',all(text in profile.headers.get('Set-Cookie','') for text in ['HttpOnly','SameSite=Lax']))
-        for action in ['playback','watch','next','move','remove','transfer_host']:
+        for action in ['transfer_host']:
             response=fixture.guest.post(fixture.url,json={'action':action,'url':'aqz-KE-bpKQ','id':queue[0]['id'],'direction':'up'})
             record('local-security',f'Guest cannot {action}',response.status_code==403)
     finally:fixture.tearDown()
@@ -107,7 +107,7 @@ def live_checks():
         request(host,path,{'action':'playback','position':100,'playing':False});_,state,_=request(guest,path)
         record('live-functional','Seek shared',state.get('position')==100)
         status,_,_=request(guest,path,{'action':'playback','position':0,'playing':True})
-        record('live-security','Guest playback denied',status==403)
+        record('live-functional','Guest playback allowed',status==200)
         request(guest,path,{'action':'add','url':'aqz-KE-bpKQ','title':'A'})
         _,state,_=request(guest,path,{'action':'add','url':'eRsGyueVLvQ','title':'B'})
         record('live-functional','Guest playlist additions',len(state.get('queue',[]))==2)
