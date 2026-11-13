@@ -113,3 +113,7 @@ body:has(.video-selection:not([hidden])) .video-stage .player-touch-surface{disp
 .room-connected .chat #chatForm{flex-shrink:0;padding:5px 0 6px}
 .keyboard-open.room-connected main{height:var(--room-vh,100dvh)!important}
 .keyboard-open.room-connected .watch>.chat{min-height:0}
+
+/* Route ordinary video taps through Solace in portrait as well as landscape.
+   Keep YouTube reachable when the browser requires its initial playback gesture. */
+.room-connected:not(.solace-fullscreen) .video-stage .player-touch-surface{display:block}
