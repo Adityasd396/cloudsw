@@ -201,7 +201,7 @@ def index():
 
 @app.get('/api/health')
 def health():
-    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2','shared_playback_v3','tictactoe_v1','chat_identity_v1','room_experience_v4'])
+    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2','shared_playback_v3','tictactoe_v1','basketball_v1','chat_identity_v1','room_experience_v4'])
 
 
 @app.get('/api/profile')

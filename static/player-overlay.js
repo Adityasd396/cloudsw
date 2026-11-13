@@ -1,7 +1,7 @@
 let overlayRoom=null;
 const overlayVisibility=new SolaceSession.AutoHideControls(3000);
 const touchSurface=element('button','player-touch-surface');touchSurface.type='button';touchSurface.setAttribute('aria-label','Show or hide playback controls');videoStage.append(touchSurface);
-function paintControls(visible){videoStage.classList.toggle('controls-visible',visible);controls.setAttribute('aria-hidden',String(!visible));fullscreen.textContent=document.body.classList.contains('solace-fullscreen')?'⛶ Exit fullscreen':'⛶ Fullscreen'}
+function paintControls(visible){visible=picker.hidden&&(window.matchMedia('(orientation: portrait)').matches&&!document.body.classList.contains('solace-fullscreen')||visible);videoStage.classList.toggle('controls-visible',visible);controls.setAttribute('aria-hidden',String(!visible));fullscreen.textContent=document.body.classList.contains('solace-fullscreen')?'⛶ Exit fullscreen':'⛶ Fullscreen'}
 function revealControls(){paintControls(overlayVisibility.show())}
 touchSurface.onclick=revealControls;
 videoStage.addEventListener('pointermove',event=>{if(event.pointerType==='mouse')revealControls()});
@@ -23,3 +23,7 @@ function syncLandscape(){
 landscapeQuery.addEventListener('change',syncLandscape);
 const existingFullscreenClick=fullscreen.onclick;fullscreen.onclick=async()=>{landscapeExpanded=false;await existingFullscreenClick();fullscreen.textContent=document.body.classList.contains('solace-fullscreen')?'⛶ Exit fullscreen':'⛶ Fullscreen';revealControls()};
 revealControls();
+
+// The picker must never share the playback controls' hit-testing layer.
+new MutationObserver(()=>paintControls(overlayVisibility.visible)).observe(picker,{attributes:true,attributeFilter:['hidden']});
+window.matchMedia('(orientation: portrait)').addEventListener('change',()=>paintControls(overlayVisibility.show()));

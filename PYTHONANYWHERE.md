@@ -97,3 +97,7 @@ Upload all of the new `static/love*` files plus `static/media/for-jaanu.mp4`, th
 ## Three-hour reliability and overlay update
 
 Upload the new `static/session.js` and `static/player-overlay.js` together with the updated `app.py`, all packaged static files and `templates/index.html`. The template now loads these helpers; omitting them can break room startup. Use the complete server ZIP to keep versions together. See LONG-SESSION-REPORT.md for measured results and physical-device limits. Installed apps need a new build with the direct `expo-keep-awake` dependency; uploading web files alone does not update an installed app.
+
+## Love hoops update
+
+Upload the complete server ZIP so `app.py`, `room_game.py`, `static/game.html`, `static/basketball.js`, `static/basketball.css`, `static/tictactoe.html`, the updated website files and template stay together. Existing game tables are reused; no manual database migration is needed. The health capability list now includes `basketball_v1`. See CUTE-UPDATE-REPORT.md for portrait/landscape and two-user smoke results.

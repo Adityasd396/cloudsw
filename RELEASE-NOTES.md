@@ -1,6 +1,8 @@
 # Solace release — 13 November 2026
 
-Latest update: tap-to-show playback controls float over the video and hide after three seconds; landscape supports full-viewport viewing. Improved recovery after backgrounding, renderer restarts and transient play failures, independent chat polling, incremental chat responses, and foreground screen wakefulness. Accelerated three-hour replay passed; actual phone soak remains unverified. See LONG-SESSION-REPORT.md.
+Cute update: added two-player Love hoops basketball with shared scores, turns, first-to-five rounds and a love-goal popup. Softened website colors and trimmed repeated welcome/playlist copy. The love command is unchanged. Portrait/landscape and two-browser playback smoke checks passed. See CUTE-UPDATE-REPORT.md for current results: 45 backend tests, 55 HTTP smoke assertions and 31 client regressions.
+
+Latest update: portrait playback controls remain visible in a compact row below the video. Landscape controls float over the video and hide after three seconds. Playback controls are hidden while selecting songs, so search and queue management stay unobstructed. Landscape supports full-viewport viewing. Improved recovery after backgrounding, renderer restarts and transient play failures, independent chat polling, incremental chat responses, and foreground screen wakefulness. Accelerated three-hour replay passed; actual phone soak remains unverified. See LONG-SESSION-REPORT.md.
 
 Local smoke update: 46 real-HTTP assertions plus actual browser login/logout and room checks pass. Corrected iframe header spacing so overlay buttons receive pointer clicks reliably. Added fresh/legacy startup checks and isolated smoke tooling. See LOCAL-SMOKE-TEST.md.
 
@@ -17,6 +19,6 @@ Previous update: iPhone fullscreen fallback; playback/queue controls for every j
 - Health reports the `room_leave_v2` capability to identify the new backend after deployment.
 - The Expo fingerprint dependency now uses patched `minimatch` 11.0.1 through a scoped override; the lockfile is included. The post-fix production dependency audit reports zero vulnerabilities.
 
-Current validation: 40 backend/startup tests, 31 mobile/JavaScript tests, 12 bounded local checks and 46 real-HTTP smoke assertions pass. TypeScript checking and iOS/Android JavaScript bundle export pass. Real-device three-hour playback remains unverified.
+Current validation: 45 backend/startup tests, 31 mobile/JavaScript tests, 12 bounded local checks and 55 real-HTTP smoke assertions pass. TypeScript checking and iOS/Android JavaScript bundle export pass. Real-device three-hour playback remains unverified.
 
 The previous live test found that PythonAnywhere lacked the Leave endpoint. This package contains the fix, but the hosted site must be updated and reloaded using `PYTHONANYWHERE.md`; these files do not establish a completed live deployment.

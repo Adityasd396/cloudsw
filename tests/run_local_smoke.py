@@ -130,6 +130,19 @@ def journey(base):
         status,game,_=request(c,endpoint,{'action':'move','cell':cell,'revision':game['revision']},origin=base)
         check('Game move '+str(cell),status==200)
     check('Game winner synchronizes',request(guest,endpoint)[1]['winner']=='X')
+    hoops=path+'/basketball'
+    check('Basketball first player joins',request(host,hoops,{'action':'join'},origin=base)[0]==200)
+    status,basket,_=request(guest,hoops,{'action':'join'},origin=base)
+    check('Basketball second player joins',status==200 and len(basket['players'])==2)
+    shot={'action':'shoot','aim':.5,'revision':basket['revision']}
+    status,basket,_=request(host,hoops,shot,origin=base)
+    check('Basketball love goal reaches both players',status==200 and basket['shot']['goal'] and request(guest,hoops)[1]['scores']['X']==1)
+    check('Basketball duplicate shot cannot score twice',request(host,hoops,shot,origin=base)[0]==409)
+    for actor,viewer,position,playing in ((host,guest,45,True),(guest,host,45,False),(host,guest,75,False),(guest,host,65,True)):
+        status,_,_=request(actor,path,{'action':'playback','position':position,'playing':playing},origin=base)
+        observed=request(viewer,path)[1]
+        check('Two-user playback sync '+str(position)+' '+str(playing),status==200 and observed['position']==position and bool(observed['playing'])==playing)
+    check('Basketball assets load',all(request(host,asset)[0]==200 for asset in ['/static/game.html','/static/basketball.js','/static/basketball.css','/static/tictactoe.html']))
     status,_,headers=request(host,'/static/media/for-jaanu.mp4',extra={'Range':'bytes=0-1023'})
     check('Love video supports byte-range playback',status==206 and headers['Content-Range'].startswith('bytes 0-1023/'))
     request(host,path+'/leave',{},origin=base);_,left,_=request(guest,path+'/leave',{},origin=base)

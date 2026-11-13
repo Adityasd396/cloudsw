@@ -81,3 +81,23 @@ body:has(.video-selection:not([hidden])) .presence-overlay{position:fixed;top:au
 .room-connected .video-stage .player-touch-surface{position:absolute;inset:0;z-index:210;display:block;width:100%;height:100%;padding:0;border:0;border-radius:0;background:transparent;cursor:pointer;transform:none}.player-touch-surface:focus-visible{outline:2px solid #c9b2ed;outline-offset:-4px}.room-connected .video-stage.needs-media-gesture .player-touch-surface{pointer-events:none}.room-connected.solace-fullscreen .video-stage .player-wrap,.room-connected.solace-fullscreen .video-stage:fullscreen .player-wrap{padding:0!important}
 @media(orientation:landscape){.room-connected.solace-fullscreen .video-stage .player-wrap{height:100dvh!important;width:100vw!important}.room-connected .video-stage .compact-player-controls{flex-wrap:nowrap}.solace-fullscreen .live-chat-overlay{bottom:80px}}
 @media(prefers-reduced-motion:reduce){.room-connected .video-stage .compact-player-controls{transition:none}}
+
+/* Keep search above all player layers; portrait controls occupy their own row. */
+.video-stage{isolation:isolate}
+.video-selection{z-index:400}
+body:has(.video-selection:not([hidden])) .video-stage .compact-player-controls,
+body:has(.video-selection:not([hidden])) .video-stage .player-touch-surface{display:none!important;pointer-events:none!important}
+@media(orientation:portrait){
+ .room-connected:not(.solace-fullscreen) .video-stage .compact-player-controls{position:relative!important;inset:auto!important;opacity:1;visibility:visible;transform:none;pointer-events:auto;background:#101116!important;padding:7px 10px!important;gap:5px;flex-wrap:nowrap;transition:none}
+ .room-connected:not(.solace-fullscreen) .video-stage .compact-player-controls button{min-height:34px;min-width:0;padding:7px 8px;font-size:10px;white-space:nowrap}
+ .room-connected:not(.solace-fullscreen) .video-stage .player-touch-surface{display:none}
+}
+
+/* Soft rose details, with the same quiet open chat layout. */
+:root{--bg:#14111b;--text:#f7eff8;--accent:#d3b5ef}
+.room-connected{background:#14111b}.room-connected .watch{background:radial-gradient(ellipse at 80% 55%,#d79cb30a,transparent 65%)}
+.home-options{background:radial-gradient(ellipse at 40% 30%,#ba8cbb16,transparent 60%),#14111b}.home-options .primary,.room-connected .room-add-row .primary,.chat .send{background:linear-gradient(120deg,#d9b7ed,#c4b4f3)}
+.solace-mark{border-color:#ddb5cf45;color:#edc4dd;background:#e6b6d00b;border-radius:20px}.solace-dedication span{color:#e7abc7}
+.room-connected .chat #chatForm{border-top-color:#e8bdd014}.room-connected .joined-names{background:#141019;border-top-color:#e8bdd00d}
+#messages .chat-message.message-mine>div:not(.mini-avatar){background:#3a2b43}.room-connected .subtle{border-color:#e5bed513}.chat-banner,.chat-footer,.tip{display:none!important}
+.chat-empty:empty{display:none}.room-connected .video-stage .compact-player-controls button{border-radius:12px}
