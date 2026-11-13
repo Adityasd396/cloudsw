@@ -24,6 +24,8 @@ static/love.js
 static/love-film.js
 static/media/for-jaanu.mp4
 static/fullscreen.js
+static/session.js
+static/player-overlay.js
 static/game.html
 static/game.css
 static/game.js
@@ -91,3 +93,7 @@ The room update adds swipe/hold replies, host crowns, participant activity chips
 Send `/iloveyou` as a complete chat message to open the love video and letter for everyone currently in the room. Each participant can close their own surprise. Joining a room does not replay old commands. The clip attempts to play with sound; phone browsers that require a gesture show a **Play with sound** button. Other room audio is muted locally while the surprise is open and restored on close; shared play/pause state is not changed by the surprise.
 
 Upload all of the new `static/love*` files plus `static/media/for-jaanu.mp4`, the updated `static/style.css`, and `templates/index.html`. Preserve the `media/` subfolder. The video is included in both ZIPs. Native phones need a rebuilt app for the new command overlay; the video itself is served from the Flask server.
+
+## Three-hour reliability and overlay update
+
+Upload the new `static/session.js` and `static/player-overlay.js` together with the updated `app.py`, all packaged static files and `templates/index.html`. The template now loads these helpers; omitting them can break room startup. Use the complete server ZIP to keep versions together. See LONG-SESSION-REPORT.md for measured results and physical-device limits. Installed apps need a new build with the direct `expo-keep-awake` dependency; uploading web files alone does not update an installed app.

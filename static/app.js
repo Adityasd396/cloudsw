@@ -1,6 +1,7 @@
 const $=id=>document.getElementById(id);
 let roomId=new URLSearchParams(location.search).get('room'),state,player,ready=false,applyingUntil=0,lastVideo='',lastMessages='',polling=false,joining=false;
 let lastPlaybackId;
+const pageRecovery=new SolaceSession.RecoveryGate();
 const preferences={get(key){try{return localStorage.getItem(key)||''}catch{return ''}},set(key,value){try{localStorage.setItem(key,value)}catch{}}};
 let displayName=preferences.get('afterglow-name');
 function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$('toast').style.display='none',4000)}
@@ -25,8 +26,8 @@ $('chatForm').onsubmit=async e=>{e.preventDefault();if(!state)return;const body=
 document.querySelectorAll('.reactions button').forEach(b=>b.onclick=()=>{if(state)action({action:'chat',body:b.textContent})});
 $('invite').onclick=async()=>{if(!roomId){openSetup();return}try{await navigator.clipboard.writeText(location.href);toast('Invite link copied. Share it with your friends.')}catch{toast('Copy the address in your browser to invite friends.')}};
 $('toggle').onclick=()=>{if(!ready||!state?.is_host)return;if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo()};$('next').onclick=()=>action({action:'next'});$('sync').onclick=()=>{synchronize(true);toast('Synced to the room. If playback is blocked, click the video to start.')};$('theater').onclick=()=>document.body.classList.toggle('theater');$('peopleButton').onclick=()=>$('people').hidden=!$('people').hidden;$('newRoom').onclick=()=>location.assign('/');$('home').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});$('rename').onclick=openSetup;
-setInterval(async()=>{if(document.hidden||!roomId||joining||polling||!state)return;polling=true;try{render(await api('/api/rooms/'+roomId))}catch(e){$('connection').textContent='● Reconnecting…';if(e.status===404){state=null;roomId=null;location.assign('/')}}finally{polling=false}},500);
+setInterval(async()=>{if(document.hidden||!roomId||joining||polling||!state)return;polling=true;try{const epoch=pageRecovery.epoch;render(await api(SolaceSession.pollPath(roomId,Math.max(0,...state.messages.map(m=>m.id)))));pageRecovery.complete(epoch)}catch(e){$('connection').textContent='● Reconnecting…';if(e.status===404){state=null;roomId=null;location.assign('/')}}finally{polling=false}},500);
 setInterval(()=>{if(ready){const title=player.getVideoData()?.title;if(title)$('videoTitle').textContent=title;if(state?.is_host&&player.getPlayerState()===1)publishPlayback()}},5000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state)synchronize(true)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){pageRecovery.suspend();return}if(!state||!roomId){pageRecovery.reset();return}const epoch=pageRecovery.begin();api(SolaceSession.pollPath(roomId,Math.max(0,...state.messages.map(m=>m.id)))).then(data=>{render(data);synchronize(true);pageRecovery.complete(epoch)}).catch(()=>{})});
 
 openSetup();

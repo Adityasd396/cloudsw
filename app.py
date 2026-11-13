@@ -409,7 +409,16 @@ def room(room_id):
         member['active']=member['status']!='inactive'
     room['participants']=room['members']
     room['members']=[member for member in room['participants'] if member['active']]
-    room['messages'] = list(reversed([dict(x) for x in db().execute('SELECT m.id,m.name,m.body,m.created,m.sender,r.id AS reply_id,r.name AS reply_name,r.body AS reply_body FROM messages m LEFT JOIN messages r ON r.room=m.room AND r.id=m.reply_to WHERE m.room=? ORDER BY m.id DESC LIMIT 100',(room_id,))]))
+    after=None
+    if request.method=='GET' and 'after' in request.args:
+        try:
+            after=int(request.args['after'])
+            if not 0<=after<=9223372036854775807:raise ValueError()
+        except (ValueError,TypeError):return jsonify(error='Invalid chat cursor.'),400
+    room['messages_delta']=after is not None
+    query='SELECT m.id,m.name,m.body,m.created,m.sender,r.id AS reply_id,r.name AS reply_name,r.body AS reply_body FROM messages m LEFT JOIN messages r ON r.room=m.room AND r.id=m.reply_to WHERE m.room=?'
+    if after is not None:query+=' AND m.id>?'
+    room['messages'] = list(reversed([dict(x) for x in db().execute(query+' ORDER BY m.id DESC LIMIT 100',(room_id,after) if after is not None else (room_id,))]))
     for message in room['messages']:
         sender=message.pop('sender')
         message['you']=sender==session['uid']

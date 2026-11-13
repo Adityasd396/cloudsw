@@ -1,11 +1,12 @@
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
 const {buildApplyScript}=require('../sync.cjs');
+const {RecoveryGate}=require('../session.cjs');
 test('native Resume wins over a stale paused sample while a request is in flight',async()=>{
  const source=fs.readFileSync(path.join(__dirname,'../App.tsx'),'utf8');
  const start=source.indexOf('async function publishState('),end=source.indexOf('  const {height,width}',start);
  const code=ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText;
  const sent=[],resolvers=[];
- const context={Date,roomRef:{current:{id:'123456',can_control:true,updated:1}},localIntent:{current:null},sampleRef:{current:{position:40,playing:true}},playbackBusy:{current:false},playbackPending:{current:null},setConnected(){},request:async(url,body)=>{sent.push(body);await new Promise(resolve=>resolvers.push(resolve))}};
+ const context={Date,sessionGate:{current:new RecoveryGate()},roomRef:{current:{id:'123456',can_control:true,updated:1}},localIntent:{current:null},sampleRef:{current:{position:40,playing:true}},playbackBusy:{current:false},playbackPending:{current:null},setConnected(){},request:async(url,body)=>{sent.push(body);await new Promise(resolve=>resolvers.push(resolve))}};
  vm.createContext(context);vm.runInContext(code,context);
  const pause=context.publishState(40,false);
  await context.publishState(40,false,true); // Delayed observer sample must not replace intent.
@@ -49,7 +50,7 @@ test('a repeated video starts from zero for a new playback instance',()=>{
 
 test('duplicate end callbacks do not repeatedly advance an empty queue',async()=>{
  const source=fs.readFileSync(path.join(__dirname,'../../static/player-room.js'),'utf8');let calls=0,complete;
- const context={state:{can_control:true,playing:1,playback_id:'one'},roomId:'123456',setInterval(){},toast(){},api:async(path,data)=>{calls++;assert.equal(data.expected_playback_id,'one');return new Promise(resolve=>complete=resolve)}};
+ const context={state:{can_control:true,playing:1,playback_id:'one'},pageRecovery:{canPublish:()=>true},roomId:'123456',setInterval(){},toast(){},api:async(path,data)=>{calls++;assert.equal(data.expected_playback_id,'one');return new Promise(resolve=>complete=resolve)}};
  context.render=next=>context.state=next;vm.createContext(context);vm.runInContext(source.slice(source.indexOf('let advancingPlayback=')),context);
  const first=context.advanceFinishedVideo();await context.advanceFinishedVideo();assert.equal(calls,1);
  complete({can_control:true,playing:0,playback_id:'two'});await first;await context.advanceFinishedVideo();assert.equal(calls,1);

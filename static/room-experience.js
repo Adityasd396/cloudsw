@@ -46,7 +46,7 @@ window.addEventListener('resize',fitChatViewport);document.addEventListener('foc
 
 // Back closes the current room surface; leaving remains an explicit action.
 let guardedRoom=null;
-const guardRender=render;render=function(data){if(state&&state.id===data.id&&data.server_time<state.server_time)return;guardRender(data);if(guardedRoom!==data.id){guardedRoom=data.id;history.pushState({solaceRoom:data.id},'',location.href)}};
+const guardRender=render;render=function(data){if(state&&state.id===data.id&&data.server_time<state.server_time)return;data=SolaceSession.mergeRoomMessages(state,data);guardRender(data);if(guardedRoom!==data.id){guardedRoom=data.id;history.pushState({solaceRoom:data.id},'',location.href)}};
 window.addEventListener('popstate',()=>{if(!state||!roomId)return;history.pushState({solaceRoom:roomId},'','/?room='+encodeURIComponent(roomId));
  if(document.activeElement?.matches('input,textarea')){document.activeElement.blur();return}
  if(document.body.classList.contains('solace-fullscreen')){exitSolaceFullscreen();return}
@@ -61,3 +61,17 @@ const reportAdButton=element('button','subtle','Ad playing');reportAdButton.type
 async function reportMyAd(active){try{await api('/api/rooms/'+encodeURIComponent(roomId),{action:'ad_status',active});myAdActive=active;reportAdButton.textContent=active?'Ad ended':'Ad playing';reportAdButton.setAttribute('aria-pressed',String(active))}catch(error){toast(error.message)}}
 reportAdButton.onclick=()=>reportMyAd(!myAdActive);document.querySelector('.compact-player-controls').append(reportAdButton);
 setInterval(()=>{if(myAdActive&&!document.hidden&&roomId&&state)reportMyAd(true)},4000);
+
+// Best-effort browser screen wake lock; released on pause/hidden/exit.
+let streamWakeLock=null,wakeRequestPending=false,nextWakeAttempt=0;
+async function maintainStreamWakeLock(){
+ const wanted=!!state?.playing&&!document.hidden;
+ if(!wanted){if(streamWakeLock){const old=streamWakeLock;streamWakeLock=null;old.release().catch(()=>{})}return}
+ if(!navigator.wakeLock||streamWakeLock||wakeRequestPending||Date.now()<nextWakeAttempt)return;
+ wakeRequestPending=true;
+ try{const lock=await navigator.wakeLock.request('screen');if(!state?.playing||document.hidden){await lock.release();return}streamWakeLock=lock;lock.addEventListener('release',()=>{if(streamWakeLock===lock)streamWakeLock=null})}
+ catch{nextWakeAttempt=Date.now()+60000}
+ finally{wakeRequestPending=false}
+}
+const wakeRender=render;render=function(data){wakeRender(data);maintainStreamWakeLock()};
+document.addEventListener('visibilitychange',()=>{nextWakeAttempt=0;maintainStreamWakeLock()});window.addEventListener('pagehide',()=>{if(streamWakeLock)streamWakeLock.release().catch(()=>{});streamWakeLock=null});

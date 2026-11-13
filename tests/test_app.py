@@ -91,6 +91,25 @@ class WatchPartyTests(unittest.TestCase):
         self.host.post(endpoint,json={'action':'join','name':'Host'})
         self.assertEqual(self.host.post(endpoint,json={'action':'chat','body':'Bad quote','reply_to':sent['id']}).status_code,400)
 
+    def test_incremental_poll_returns_new_messages_and_current_playback(self):
+        first=self.host.post(self.url,json={'action':'chat','body':'First'}).json['messages'][-1]
+        self.guest.post(self.url,json={'action':'chat','body':'Reply','reply_to':first['id']})
+        self.guest.post(self.url,json={'action':'playback','position':75,'playing':False})
+        delta=self.host.get(self.url+'?after='+str(first['id'])).json
+        self.assertTrue(delta['messages_delta'])
+        self.assertEqual(len(delta['messages']),1)
+        self.assertEqual(delta['messages'][0]['body'],'Reply')
+        self.assertEqual(delta['messages'][0]['reply']['id'],first['id'])
+        self.assertEqual(delta['position'],75)
+        quiet=self.host.get(self.url+'?after='+str(delta['messages'][0]['id'])).json
+        self.assertEqual(quiet['messages'],[])
+        self.assertFalse(self.host.get(self.url).json['messages_delta'])
+        self.assertEqual(len(self.host.get(self.url).json['messages']),2)
+
+    def test_invalid_chat_cursor_is_rejected_without_server_error(self):
+        for value in ['bad','-1','9223372036854775808']:
+            self.assertEqual(self.host.get(self.url+'?after='+value).status_code,400)
+
     def test_any_participant_reports_ads_with_stable_notification_identity(self):
         response=self.guest.post(self.url,json={'action':'ad_status','active':True})
         self.assertEqual(response.status_code,200)

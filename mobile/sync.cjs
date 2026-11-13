@@ -33,11 +33,18 @@ function buildApplyScript(position, playing, force=false) {
     if (document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay')) return;
     const video=document.querySelector('video');
     if (!video || video.readyState<2) return;
-    if (${Boolean(force)})window.__afterglowBlocked=false;
+    if (${Boolean(force)}) {window.__afterglowBlocked=false;window.__afterglowPlayPending=false;window.__afterglowPlayToken=(window.__afterglowPlayToken||0)+1;}
+    const now=Date.now();
+    if(window.__afterglowPlayPending&&(window.__afterglowPlayVideo!==video||now-(window.__afterglowPlayStarted||0)>10000)){window.__afterglowPlayPending=false;window.__afterglowPlayToken=(window.__afterglowPlayToken||0)+1;}
     if (video.seeking)return;
     if (Number.isFinite(video.duration) && (Math.abs(video.currentTime-${position})>1.25||${Boolean(force)})) video.currentTime=Math.min(${position},Math.max(0,video.duration-.1));
     if (${Boolean(playing)}) {
-      if(video.paused&&!window.__afterglowPlayPending&&!window.__afterglowBlocked) {window.__afterglowPlayPending=true;try{const promise=video.play();if(promise)promise.then(()=>{window.__afterglowBlocked=false;window.__afterglowPlayPending=false}).catch(()=>{window.__afterglowBlocked=true;window.__afterglowPlayPending=false});else window.__afterglowPlayPending=false}catch{window.__afterglowPlayPending=false;window.__afterglowBlocked=true}}
+      if(video.paused&&!window.__afterglowPlayPending&&!window.__afterglowBlocked) {
+        const token=(window.__afterglowPlayToken||0)+1;window.__afterglowPlayToken=token;
+        window.__afterglowPlayPending=true;window.__afterglowPlayStarted=now;window.__afterglowPlayVideo=video;
+        const finish=blocked=>{if(window.__afterglowPlayToken!==token)return;window.__afterglowBlocked=blocked;window.__afterglowPlayPending=false;};
+        try{const promise=video.play();if(promise)promise.then(()=>finish(false)).catch(error=>finish(error&&error.name==='NotAllowedError'));else finish(false)}catch(error){finish(error&&error.name==='NotAllowedError')}
+      }
     } else if (!video.paused) video.pause();
   })(); true;`;
 }
