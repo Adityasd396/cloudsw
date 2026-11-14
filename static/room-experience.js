@@ -3,9 +3,10 @@ const replyPreview=element('div','reply-preview');replyPreview.hidden=true;
 const replyText=element('span'),cancelReply=element('button','subtle','×');cancelReply.type='button';cancelReply.setAttribute('aria-label','Cancel reply');
 cancelReply.onclick=()=>{replyTarget=null;replyPreview.hidden=true};replyPreview.append(replyText,cancelReply);$('chatForm').before(replyPreview);
 function chooseReply(message){replyTarget=message;replyText.textContent='Reply to '+message.name+' · '+message.body.slice(0,120);replyPreview.hidden=false;$('message').focus()}
-$('chatForm').onsubmit=async event=>{event.preventDefault();if(!state)return;const body=$('message').value.trim();if(!body)return;const send=$('chatForm').querySelector('button');send.disabled=true;const replying=replyTarget;
+let chatSendPending=false;
+$('chatForm').onsubmit=async event=>{event.preventDefault();if(!state||chatSendPending)return;const body=$('message').value.trim();if(!body)return;chatSendPending=true;const send=$('chatForm').querySelector('.send');send.disabled=true;const replying=replyTarget;
  try{if(await action({action:'chat',body,...(replying?{reply_to:replying.id}:{})})){if($('message').value.trim()===body)$('message').value='';if(replyTarget===replying){replyTarget=null;replyPreview.hidden=true}$('messages').scrollTop=$('messages').scrollHeight}}
- finally{send.disabled=false}
+ finally{chatSendPending=false;send.disabled=false}
 };
 let swipe=null;
 $('messages').addEventListener('pointerdown',event=>{const row=event.target.closest('.chat-message');if(!row||event.target.closest('button')||event.pointerType==='mouse'&&event.button!==0)return;swipe={row,id:event.pointerId,x:event.clientX,y:event.clientY,dx:0}});
@@ -34,19 +35,30 @@ render=function(data){
  for(const message of data.messages){if(message.id<=experienceCursor)continue;const bubble=element('div','float-chat-message');bubble.append(element('strong','',message.name+(message.is_host?' 👑':'')),element('span','',message.body.slice(0,150)));liveChat.append(bubble);while(liveChat.childElementCount>4)liveChat.firstElementChild.remove();setTimeout(()=>bubble.remove(),6500)}
  experienceCursor=Math.max(experienceCursor,latest);
 };
-let restingViewportHeight=innerHeight;
+let restingViewportHeight=innerHeight,restingViewportWidth=innerWidth,viewportFrame=0,keyboardVisible=false,lastViewportStyle='';
 function fitChatViewport(){
- const viewport=window.visualViewport,focused=document.activeElement?.matches('input,textarea'),height=viewport?.height||innerHeight;
- if(!focused)restingViewportHeight=height;
- document.documentElement.style.setProperty('--room-vh',height+'px');document.documentElement.style.setProperty('--room-top',(viewport?.offsetTop||0)+'px');
- document.body.classList.toggle('keyboard-open',!!focused&&Math.max(innerHeight,restingViewportHeight)-height>120);
+ viewportFrame=0;
+ const viewport=window.visualViewport,height=viewport?.height||innerHeight,width=innerWidth;
+ // Pinch zoom is a browser interaction, not a keyboard resize.
+ if(viewport?.scale&&Math.abs(viewport.scale-1)>.05)return;
+ const focused=document.activeElement===$('message');
+ if(Math.abs(width-restingViewportWidth)>100){restingViewportWidth=width;restingViewportHeight=innerHeight;keyboardVisible=false}
+ const gap=Math.max(innerHeight,restingViewportHeight)-height;
+ // Hysteresis keeps the footer from flashing back during the closing animation.
+ keyboardVisible=(focused||keyboardVisible)&&gap>(keyboardVisible?40:80);
+ if(!focused&&!keyboardVisible)restingViewportHeight=height;
+ const top=keyboardVisible?Math.max(0,viewport?.offsetTop||0):0,signature=height+':'+top;
+ if(signature!==lastViewportStyle){lastViewportStyle=signature;document.documentElement.style.setProperty('--room-vh',height+'px');document.documentElement.style.setProperty('--room-top',top+'px')}
+ document.body.classList.toggle('keyboard-open',keyboardVisible);
+ window.SolaceChat?.layout();
 }
-window.visualViewport?.addEventListener('resize',fitChatViewport);window.visualViewport?.addEventListener('scroll',fitChatViewport);
-window.addEventListener('resize',fitChatViewport);document.addEventListener('focusin',fitChatViewport);document.addEventListener('focusout',()=>setTimeout(fitChatViewport,80));fitChatViewport();
+function queueChatViewport(){if(!viewportFrame)viewportFrame=requestAnimationFrame(fitChatViewport)}
+window.visualViewport?.addEventListener('resize',queueChatViewport,{passive:true});window.visualViewport?.addEventListener('scroll',queueChatViewport,{passive:true});
+window.addEventListener('resize',queueChatViewport,{passive:true});document.addEventListener('focusin',queueChatViewport);document.addEventListener('focusout',queueChatViewport);window.addEventListener('pageshow',queueChatViewport);window.addEventListener('pagehide',()=>{if(viewportFrame)cancelAnimationFrame(viewportFrame);viewportFrame=0});fitChatViewport();
 
 // Back closes the current room surface; leaving remains an explicit action.
 let guardedRoom=null;
-const guardRender=render;render=function(data){if(state&&state.id===data.id&&data.server_time<state.server_time)return;data=SolaceSession.mergeRoomMessages(state,data);guardRender(data);if(guardedRoom!==data.id){guardedRoom=data.id;history.pushState({solaceRoom:data.id},'',location.href)}};
+const guardRender=render;render=function(data){if(SolaceSession.isOlderSnapshot(state,data))return;data=SolaceSession.mergeRoomMessages(state,data);guardRender(data);if(guardedRoom!==data.id){guardedRoom=data.id;history.pushState({solaceRoom:data.id},'',location.href)}};
 window.addEventListener('popstate',()=>{if(!state||!roomId)return;history.pushState({solaceRoom:roomId},'','/?room='+encodeURIComponent(roomId));
  if(document.activeElement?.matches('input,textarea')){document.activeElement.blur();return}
  if(document.body.classList.contains('solace-fullscreen')){exitSolaceFullscreen();return}

@@ -11,13 +11,17 @@ class WatchPartyTests(unittest.TestCase):
         app.config['TESTING'] = True
         with app.app_context():
             db().executescript('''
+            CREATE TABLE app_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+            INSERT INTO app_metadata VALUES('generation','test-generation');
             CREATE TABLE room_games(room TEXT PRIMARY KEY,state TEXT);
+            CREATE TABLE mutation_receipts(room TEXT,actor TEXT,request_id TEXT,payload_hash TEXT,result TEXT,created REAL,PRIMARY KEY(room,actor,request_id));
+            CREATE TABLE reliability_metrics(minute INTEGER,name TEXT,count INTEGER,total REAL,maximum REAL,PRIMARY KEY(minute,name));
             CREATE TABLE presence(room TEXT,id TEXT,active INTEGER,PRIMARY KEY(room,id));
             CREATE TABLE participant_ads(room TEXT,id TEXT,active INTEGER,updated REAL,started REAL,PRIMARY KEY(room,id));
             CREATE TABLE room_ads(room TEXT PRIMARY KEY,active INTEGER,updated REAL);
             CREATE TABLE profiles(id TEXT PRIMARY KEY,name TEXT,updated REAL);
             CREATE TABLE typing(room TEXT,id TEXT,updated REAL,PRIMARY KEY(room,id));
-            CREATE TABLE rooms(id TEXT PRIMARY KEY,name TEXT,host TEXT,video TEXT,playing INTEGER DEFAULT 0,position REAL DEFAULT 0,updated REAL,playback_id TEXT NOT NULL DEFAULT 'initial');
+            CREATE TABLE rooms(id TEXT PRIMARY KEY,name TEXT,host TEXT,video TEXT,playing INTEGER DEFAULT 0,position REAL DEFAULT 0,updated REAL,playback_id TEXT NOT NULL DEFAULT 'initial',playback_revision INTEGER NOT NULL DEFAULT 0,command_revision INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE members(room TEXT,id TEXT,name TEXT,seen REAL,PRIMARY KEY(room,id));
             CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT,room TEXT,name TEXT,body TEXT,created REAL,sender TEXT,reply_to INTEGER);
             CREATE TABLE queue(id INTEGER PRIMARY KEY AUTOINCREMENT,room TEXT,video TEXT,title TEXT,added_by TEXT,sort_order INTEGER NOT NULL DEFAULT 0);
@@ -355,7 +359,7 @@ class WatchPartyTests(unittest.TestCase):
         with patch('app.time.time',return_value=start+90):
             self.host.get('/api/health')
             with app.app_context():self.assertEqual(db().execute('SELECT count(*) FROM rooms').fetchone()[0],1)
-        with patch('app.time.time',return_value=start+130):
+        with patch('app.time.time',return_value=start+1805):
             self.host.get('/api/health')
             with app.app_context():self.assertEqual(db().execute('SELECT count(*) FROM rooms').fetchone()[0],0)
 

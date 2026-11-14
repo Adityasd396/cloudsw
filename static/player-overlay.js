@@ -16,7 +16,7 @@ let landscapeExpanded=false;
 const landscapeQuery=window.matchMedia('(orientation: landscape) and (pointer: coarse)');
 function syncLandscape(){
  if(!state)return;
- if(landscapeQuery.matches&&!document.body.classList.contains('solace-fullscreen')){landscapeExpanded=true;document.body.classList.add('solace-fullscreen');revealControls()}
+ if(landscapeQuery.matches&&!document.body.classList.contains('solace-fullscreen')&&document.activeElement!==$('message')&&!document.body.classList.contains('keyboard-open')&&!document.body.classList.contains('gesture-picker-open')){landscapeExpanded=true;document.body.classList.add('solace-fullscreen');revealControls()}
  else if(!landscapeQuery.matches&&landscapeExpanded){landscapeExpanded=false;exitSolaceFullscreen();revealControls()}
  fullscreen.textContent=document.body.classList.contains('solace-fullscreen')?'⛶ Exit fullscreen':'⛶ Fullscreen';
 }

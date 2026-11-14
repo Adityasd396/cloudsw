@@ -11,3 +11,7 @@
 
 !admin_panel.py
 !setup_admin.py
+
+!release.json
+!tools/
+!tools/storage.py

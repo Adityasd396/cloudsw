@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -55,6 +56,12 @@ def register_admin(app):
                     CREATE TABLE IF NOT EXISTS chat_archive(room TEXT,message_id INTEGER,visitor TEXT,name TEXT,body TEXT,reply TEXT,created REAL,PRIMARY KEY(room,message_id));
                     CREATE TABLE IF NOT EXISTS requests(minute INTEGER PRIMARY KEY,total INTEGER,errors INTEGER,elapsed REAL);
                     CREATE TABLE IF NOT EXISTS login_attempts(ip TEXT PRIMARY KEY,attempts INTEGER,until REAL);
+                    CREATE TABLE IF NOT EXISTS admin_sessions(token_hash TEXT PRIMARY KEY,expires REAL,version TEXT,csrf TEXT);
+                    CREATE TABLE IF NOT EXISTS client_diagnostics(visitor TEXT,room TEXT,received REAL,role TEXT,details TEXT,PRIMARY KEY(visitor,room));
+                    CREATE TABLE IF NOT EXISTS diagnostic_events(id INTEGER PRIMARY KEY,visitor TEXT,room TEXT,created REAL,role TEXT,details TEXT);
+                    CREATE INDEX IF NOT EXISTS diagnostic_time ON diagnostic_events(created);
+                    CREATE INDEX IF NOT EXISTS diagnostic_member ON diagnostic_events(visitor,room,id);
+                    CREATE INDEX IF NOT EXISTS diagnostic_received ON client_diagnostics(received);
                     ''')
                     if 'active' not in {column['name'] for column in connection.execute('PRAGMA table_info(visitors)')}:connection.execute('ALTER TABLE visitors ADD COLUMN active INTEGER NOT NULL DEFAULT 1')
                     try:path.chmod(0o600)
@@ -70,7 +77,7 @@ def register_admin(app):
         key=app.instance_path
         if now-last_purge.get(key,0)<3600:return
         cutoff=now-RETENTION_DAYS*86400
-        for table,column in [('visitors','last'),('visitor_ips','last'),('events','created'),('chat_archive','created'),('requests','minute')]:
+        for table,column in [('visitors','last'),('visitor_ips','last'),('events','created'),('chat_archive','created'),('requests','minute'),('client_diagnostics','received'),('diagnostic_events','created')]:
             connection.execute(f'DELETE FROM {table} WHERE {column}<?',(cutoff/60 if table=='requests' else cutoff,))
         connection.execute('DELETE FROM login_attempts WHERE until<?',(now,))
         last_purge[key]=now
@@ -96,7 +103,39 @@ def register_admin(app):
                 connection.execute('INSERT OR IGNORE INTO chat_archive VALUES(?,?,?,?,?,?,?)',(row['room'],row['id'],who,row['name'],row['body'],json.dumps(reply),row['created']))
             return connection.total_changes-before
 
-    app.extensions['solace_ops']={'seed_archive':seed_archive}
+    def record_client(room,role,payload,server_details):
+        if not isinstance(payload,dict):return False
+        details={}
+        choices={'client':('web','native'),'visibility':('visible','hidden','background'),'connection':('online','offline'),'orientation':('portrait','landscape'),'playback':('playing','paused','buffering','ended','loading','error','unavailable','ad'),'screen':('watch','search','queue','games','game','room'),'network_type':('slow-2g','2g','3g','4g','unknown'),'error':('none','player_error','network_error')}
+        for key,values in choices.items():
+            if payload.get(key) in values:details[key]=payload[key]
+        for key in ('platform','release','language','timezone'):
+            value=payload.get(key)
+            if isinstance(value,str):details[key]=''.join(c for c in value[:64] if c.isalnum() or c in ' /_+.-')
+        for key,maximum in [('width',10000),('height',10000),('pixel_ratio',10),('position',864000),('duration',864000),('drift_ms',600000),('request_rtt_ms',60000),('network_rtt_ms',60000),('downlink_mbps',10000),('volume',100)]:
+            value=payload.get(key)
+            if type(value) in (int,float) and math.isfinite(value) and 0<=value<=maximum:details[key]=round(value,2)
+        for key in ('keyboard','typing','fullscreen','muted','ready'):
+            if type(payload.get(key)) is bool:details[key]=payload[key]
+        details.update(server_details);now=time.time();uid=visitor()
+        try:
+            with storage() as connection:
+                connection.execute('BEGIN IMMEDIATE')
+                prior=connection.execute('SELECT received,details FROM client_diagnostics WHERE visitor=? AND room=?',(uid,room)).fetchone()
+                if prior and now-prior['received']<2:return False
+                encoded=json.dumps(details,sort_keys=True,separators=(',',':'))
+                connection.execute('INSERT INTO client_diagnostics VALUES(?,?,?,?,?) ON CONFLICT(visitor,room) DO UPDATE SET received=excluded.received,role=excluded.role,details=excluded.details',(uid,room,now,role,encoded))
+                recent=connection.execute('SELECT created,details FROM diagnostic_events WHERE visitor=? AND room=? ORDER BY id DESC LIMIT 1',(uid,room)).fetchone()
+                transition=('visibility','connection','playback','keyboard','typing','screen','error','fullscreen')
+                old=json.loads(recent['details']) if recent else {}
+                changed=any(old.get(key)!=details.get(key) for key in transition)
+                if not recent or now-recent['created']>=30 or changed and now-recent['created']>=5:
+                    connection.execute('INSERT INTO diagnostic_events(visitor,room,created,role,details) VALUES(?,?,?,?,?)',(uid,room,now,role,encoded))
+                purge(connection,now)
+            return True
+        except (sqlite3.Error,OSError):return False
+
+    app.extensions['solace_ops']={'seed_archive':seed_archive,'record_client':record_client}
 
     @app.before_request
     def operations_timer():g.ops_started=time.perf_counter()
@@ -153,18 +192,25 @@ def register_admin(app):
         return value
 
     def authorized():
-        value=configured()
-        expected=hashlib.sha256(value.encode()).hexdigest()
-        return session.get('ops_version')==expected and 0<=time.time()-session.get('ops_issued',0)<1800
+        value=configured();token=request.cookies.get('solace_ops')
+        if not token:return False
+        digest=hashlib.sha256(token.encode()).hexdigest()
+        try:
+            with storage() as connection:
+                row=connection.execute('SELECT * FROM admin_sessions WHERE token_hash=? AND expires>?',(digest,time.time())).fetchone()
+        except (sqlite3.Error,OSError):return False
+        if not row or row['version']!=hashlib.sha256(value.encode()).hexdigest():return False
+        g.ops_auth=dict(row);return True
 
     def csrf_valid():
         token=request.form.get('csrf') or request.headers.get('X-CSRF-Token','')
-        return bool(session.get('ops_csrf')) and hmac.compare_digest(str(token),session['ops_csrf'])
+        expected=g.ops_auth['csrf'] if 'ops_auth' in g else session.get('ops_csrf')
+        return bool(expected) and hmac.compare_digest(str(token),expected)
 
     @app.route(BASE,methods=['GET','POST'])
     def operations_home():
         value=configured();error=None
-        if authorized():return render_template('admin.html',csrf=session['ops_csrf'])
+        if authorized():return render_template('admin.html',csrf=g.ops_auth['csrf'])
         if request.method=='POST':
             if not csrf_valid():abort(403)
             now=time.time();ip=client_ip()
@@ -176,8 +222,13 @@ def register_admin(app):
                 if check_password_hash(value,request.form.get('password','')[:1024]):
                     connection.execute('DELETE FROM login_attempts WHERE ip=?',(ip,))
                     connection.execute('INSERT INTO events(visitor,name,ip,event,room,created) VALUES(?,?,?,?,?,?)',(visitor(),'Administrator',ip,'admin_login',None,now))
-                    session.update(ops_version=hashlib.sha256(value.encode()).hexdigest(),ops_issued=now,ops_csrf=secrets.token_urlsafe(32))
-                    return redirect(BASE,code=303)
+                    token=secrets.token_urlsafe(32);csrf=secrets.token_urlsafe(32);version=hashlib.sha256(value.encode()).hexdigest()
+                    connection.execute('DELETE FROM admin_sessions WHERE expires<?',(now,))
+                    connection.execute('INSERT INTO admin_sessions VALUES(?,?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),now+1800,version,csrf))
+                    session.update(ops_version=version,ops_issued=now,ops_csrf=csrf)
+                    response=redirect(BASE,code=303)
+                    response.set_cookie('solace_ops',token,max_age=1800,httponly=True,secure=request.is_secure,samesite='Strict',path=BASE)
+                    return response
                 count=entry['attempts']+1 if entry and entry['until']>now else 1
                 until=entry['until'] if entry and entry['until']>now else now+900
                 connection.execute('INSERT INTO login_attempts VALUES(?,?,?) ON CONFLICT(ip) DO UPDATE SET attempts=excluded.attempts,until=excluded.until',(ip,count,until))
@@ -189,9 +240,10 @@ def register_admin(app):
     def operations_logout():
         if not authorized() or not csrf_valid():abort(403)
         with storage() as connection:
+            connection.execute('DELETE FROM admin_sessions WHERE token_hash=?',(g.ops_auth['token_hash'],))
             connection.execute('INSERT INTO events(visitor,name,ip,event,room,created) VALUES(?,?,?,?,?,?)',(visitor(),'Administrator',client_ip(),'admin_logout',None,time.time()))
         for key in ('ops_version','ops_issued','ops_csrf'):session.pop(key,None)
-        return redirect(BASE,code=303)
+        response=redirect(BASE,code=303);response.delete_cookie('solace_ops',path=BASE,httponly=True,secure=request.is_secure,samesite='Strict');return response
 
     @app.get(BASE+'/data')
     def operations_data():
@@ -204,6 +256,9 @@ def register_admin(app):
             matches=[dict(r) for r in connection.execute("SELECT ip,COUNT(DISTINCT visitor) AS devices FROM visitor_ips WHERE ip!='unknown' AND last>=? GROUP BY ip HAVING COUNT(DISTINCT visitor)>1 ORDER BY devices DESC LIMIT 100",(now-RETENTION_DAYS*86400,))]
             traffic=dict(connection.execute('SELECT COALESCE(SUM(total),0) AS requests,COALESCE(SUM(errors),0) AS errors,COALESCE(SUM(elapsed),0) AS elapsed FROM requests WHERE minute>=?',(int(now//60)-4,)).fetchone())
             backups=connection.execute('SELECT count(*) FROM chat_archive WHERE created>=?',(now-RETENTION_DAYS*86400,)).fetchone()[0]
+            diagnostics=[dict(r) for r in connection.execute('SELECT d.*,COALESCE(v.name,\'Guest\') AS name,v.ip,v.agent FROM client_diagnostics d LEFT JOIN visitors v ON v.id=d.visitor WHERE d.received>=? ORDER BY d.received DESC LIMIT 300',(now-RETENTION_DAYS*86400,))]
+            diagnostic_history=[dict(r) for r in connection.execute('SELECT e.*,COALESCE(v.name,\'Guest\') AS name FROM diagnostic_events e LEFT JOIN visitors v ON v.id=e.visitor WHERE e.created>=? ORDER BY e.id DESC LIMIT 200',(now-RETENTION_DAYS*86400,))]
+            for item in diagnostics+diagnostic_history:item['details']=json.loads(item['details'])
         check=time.perf_counter();rooms=members=0;status='online'
         try:
             with closing(sqlite3.connect(Path(app.instance_path)/'afterglow.db',timeout=.15)) as connection:
@@ -212,7 +267,7 @@ def register_admin(app):
         except sqlite3.Error:status='database_unavailable'
         load=list(os.getloadavg()) if hasattr(os,'getloadavg') else None
         uptime=max(.001,time.monotonic()-started)
-        return jsonify(status=status,db_check_ms=round((time.perf_counter()-check)*1000,2),rooms=rooms,active_members=members,visitors=visitors,events=events,ip_matches=matches,chat_backup_count=backups,traffic=traffic,host_load_averages=load,worker_uptime_seconds=round(uptime),worker_cpu_average_percent=round((time.process_time()-cpu_started)/uptime*100,2),retention_days=RETENTION_DAYS,ip_source='Trusted X-Real-IP' if app.config.get('OPS_TRUST_X_REAL_IP') or os.environ.get('SOLACE_TRUST_X_REAL_IP')=='1' else 'WSGI remote address',now=now)
+        return jsonify(client_diagnostics=diagnostics,diagnostic_history=diagnostic_history,reliability=app.extensions.get('solace_reliability',lambda:[])(),status=status,db_check_ms=round((time.perf_counter()-check)*1000,2),rooms=rooms,active_members=members,visitors=visitors,events=events,ip_matches=matches,chat_backup_count=backups,traffic=traffic,host_load_averages=load,worker_uptime_seconds=round(uptime),worker_cpu_average_percent=round((time.process_time()-cpu_started)/uptime*100,2),retention_days=RETENTION_DAYS,ip_source='Trusted X-Real-IP' if app.config.get('OPS_TRUST_X_REAL_IP') or os.environ.get('SOLACE_TRUST_X_REAL_IP')=='1' else 'WSGI remote address',now=now)
 
     @app.get(BASE+'/chat-backup.json')
     def operations_backup():

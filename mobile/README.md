@@ -1,3 +1,11 @@
+# Solace mobile — 2026.11.14.1 update
+
+Rebuild the standalone apps from this source after updating the Flask server. New transport requires the safe_retries_v1 backend capability and preserves request IDs across bounded retries. Queue, Room, Search and Games use separate views. Love hoops and tic-tac-toe use the shared server pages through a restricted native game bridge; credentials stay in native requests. Keyboard/history following and reduced-motion handling are updated. /iloveyou assets and message remain unchanged.
+
+TypeScript/client tests and iOS/Android JavaScript export are checked locally. Signed APK/IPA generation, real keyboards, background behavior, heat/battery and a three-hour physical-phone test are not verified. See ../HARDENING-REPORT.md and ../DEPLOYMENT-RELIABILITY.md. If the room server address needs changing, the connection error screen opens a separate Server settings view; standalone builds require HTTPS.
+
+---
+
 # Solace for Android and iPhone
 
 This is the native phone client. Its top panel loads **https://m.youtube.com/** directly in a native WebView, not a YouTube iframe. Search, browse, and select videos on the actual mobile YouTube website. Chat, reactions, playlist order, and host controls are native app controls underneath.

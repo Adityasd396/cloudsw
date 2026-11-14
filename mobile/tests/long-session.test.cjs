@@ -52,7 +52,7 @@ test('native publisher cannot broadcast a stale pause while suspended or recover
 test('chat mutations do not suppress the independent native polling loop',async()=>{
  const source=fs.readFileSync(path.join(__dirname,'../App.tsx'),'utf8'),start=source.indexOf('  useEffect(()=>{const timer=setInterval(async()=>'),end=source.indexOf('  const leaving=',start);
  let tick,reads=0,received=0;const gate=new RecoveryGate();
- const context={Date,useEffect:fn=>fn(),setInterval:fn=>(tick=fn,1),clearInterval(){},leaving:{current:false},active:{current:true},roomRef:{current:{id:'123456'}},pollBusy:{current:false},mutating:{current:12},lastMessage:{current:100},sessionGate:{current:gate},pollPath,request:async url=>{reads++;assert.ok(url.endsWith('?after=100'));return {}},receive(){received++},setConnected(){},setRoom(){},setEntryMode(){},sampleRef:{current:null}};
+ const context={Date,useEffect:fn=>fn(),setInterval:fn=>(tick=fn,1),clearInterval(){},leaving:{current:false},active:{current:true},roomRef:{current:{id:'123456'}},pollBusy:{current:false},mutating:{current:12},pollDue:{current:0},pollErrors:{current:0},pollDelay:()=>650,lastMessage:{current:100},sessionGate:{current:gate},pollPath,request:async url=>{reads++;assert.ok(url.endsWith('?after=100'));return {}},receive(){received++},setConnected(){},setRoom(){},setEntryMode(){},sampleRef:{current:null}};
  vm.createContext(context);vm.runInContext(ts.transpileModule(source.slice(start,end),{}).outputText,context);await tick();assert.equal(reads,1);assert.equal(received,1);
 });
 

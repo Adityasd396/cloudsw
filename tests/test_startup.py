@@ -65,6 +65,18 @@ print('Fresh schema and preserved legacy data checks passed.')
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         finally:temporary.cleanup()
 
+    def test_concurrent_first_start_uses_one_secret_and_schema(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with tempfile.TemporaryDirectory(prefix='.smoke-concurrent-',dir=ROOT) as temporary:
+            target=Path(temporary).resolve();self.assertEqual(target.parent,ROOT.resolve())
+            for name in ('app.py','room_game.py','admin_panel.py'):shutil.copy2(ROOT/name,target/name)
+            script="import hashlib;from app import app,db;print(hashlib.sha256(app.secret_key.encode()).hexdigest());assert len(app.secret_key)==64"
+            environment=os.environ.copy();environment.pop('SECRET_KEY',None);environment.pop('SOLACE_ADMIN_PASSWORD_HASH',None)
+            def start(_):return subprocess.run([sys.executable,'-B','-c',script],cwd=target,env=environment,text=True,capture_output=True,timeout=30)
+            with ThreadPoolExecutor(max_workers=3) as pool:results=list(pool.map(start,range(3)))
+            for result in results:self.assertEqual(result.returncode,0,result.stderr)
+            self.assertEqual(len({result.stdout.strip() for result in results}),1)
+
     def test_fresh_install_starts_and_serves_rooms(self):self.verify_startup()
 
     def test_legacy_database_migrates_without_losing_history(self):self.verify_startup(legacy=True)

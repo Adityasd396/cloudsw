@@ -1,7 +1,7 @@
 const room=new URLSearchParams(location.search).get('room'),endpoint='/api/rooms/'+encodeURIComponent(room)+'/basketball';
 const $=id=>document.getElementById(id);let game=null,busy=false,polling=false,ended=false,lastShot=null,goalTimer,ballTimer,aim=.5;
-$('otherGame').href='/static/tictactoe.html?room='+encodeURIComponent(room);
-function draw(next){if(game&&next.revision<game.revision)return;const initial=!game;game=next;
+$('otherGame').href='/static/tictactoe.html?room='+encodeURIComponent(room)+'&v='+encodeURIComponent(document.querySelector('meta[name=solace-release]')?.content||'development');
+function draw(next){if(game&&game.storage_generation===next.storage_generation&&next.revision<game.revision)return;const initial=!game||game.storage_generation!==next.storage_generation;if(initial)lastShot=null;game=next;
  $('scores').replaceChildren(...['X','O'].map(role=>{const node=document.createElement('div');node.className='score'+(game.turn===role?' turn':'');node.append(document.createTextNode(game.players[role]||'Waiting'));const n=document.createElement('b');n.textContent=game.scores[role];node.append(n);return node}));
  const ready=Object.keys(game.players).length===2;$('status').textContent=game.winner?game.players[game.winner]+' wins ♡':!ready?'Waiting for two players':game.you===game.turn?'Your shot ♡':game.players[game.turn]+'’s shot';
  $('join').hidden=!!game.you||ready;$('shoot').hidden=!game.you||!!game.winner;$('shoot').disabled=busy||!ready||game.turn!==game.you;$('reset').hidden=!game.winner||!game.you;

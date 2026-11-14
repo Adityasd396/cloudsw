@@ -5,8 +5,9 @@ type Props={docked?:boolean;playing:boolean;expanded:boolean;active:boolean;capt
 export default function PlayerControls(props:Props){
  const controller=useRef(new AutoHideControls(3000)),opacity=useRef(new Animated.Value(1)).current;
  const visibleRef=useRef(true);
- const [visible,setVisible]=useState(true),[screenReader,setScreenReader]=useState(false);
- function paint(next:boolean){if(visibleRef.current===next)return;visibleRef.current=next;setVisible(next);Animated.timing(opacity,{toValue:next?1:0,duration:200,useNativeDriver:true}).start()}
+ const [visible,setVisible]=useState(true),[screenReader,setScreenReader]=useState(false),[reducedMotion,setReducedMotion]=useState(false);
+ function paint(next:boolean){if(visibleRef.current===next)return;visibleRef.current=next;setVisible(next);Animated.timing(opacity,{toValue:next?1:0,duration:reducedMotion?0:200,useNativeDriver:true}).start()}
+ useEffect(()=>{AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);const motion=AccessibilityInfo.addEventListener('reduceMotionChanged',setReducedMotion);return()=>motion.remove()},[]);
  useEffect(()=>{AccessibilityInfo.isScreenReaderEnabled().then(setScreenReader);const listener=AccessibilityInfo.addEventListener('screenReaderChanged',setScreenReader);return()=>listener.remove()},[]);
  useEffect(()=>{controller.current.show();paint(true);if(!props.active||props.docked)return;const timer=setInterval(()=>{const next=(controller.current.focused=screenReader,controller.current.update(props.playing));paint(next)},250);return()=>clearInterval(timer)},[props.playing,props.active,props.expanded,props.docked,screenReader]);
  const interact=(action:()=>void)=>{controller.current.show();paint(true);action()};

@@ -4,6 +4,8 @@ python -B tests/run_local_smoke.py --serve --port 8017
 The optional --serve mode leaves the test app open for browser verification.
 Its password is a public test fixture, never a real administrator credential.
 """
+from contextlib import closing
+import sqlite3
 import argparse
 import http.cookiejar
 import json
@@ -71,6 +73,8 @@ def journey(base):
 
     status,page,_=request(host,'/')
     check('Home page loads',status==200 and 'Solace' in page)
+    health=request(host,'/api/health')[1]
+    check('Modern reliability capabilities and reconnect grace',{'ordered_playback_v1','safe_retries_v1'}<=set(health['capabilities']) and health['reconnect_grace_seconds']==1800)
     assets=set(re.findall(r'(?:src|href)="(/static/[^\"]+)"',page))
     check('All home script/style assets load',all(request(host,asset)[0]==200 for asset in assets))
     for path in ('/ops/solace/data','/ops/solace/chat-backup.json'):
@@ -86,6 +90,7 @@ def journey(base):
     check('Dashboard JavaScript loads',request(admin,'/static/admin.js')[0]==200)
     status,stats,headers=request(admin,'/ops/solace/data')
     check('Authenticated stats are available and non-cacheable',status==200 and stats['status']=='online' and headers['Cache-Control']=='no-store')
+    check('Reliability aggregates stay behind admin login','reliability' in stats)
     check('Logout without CSRF rejected',request(admin,'/ops/solace/logout',{},form=True,origin=base)[0]==403)
     csrf=re.search(r'name="csrf" value="([^"]+)"',dashboard).group(1)
     check('Admin logout succeeds',request(admin,'/ops/solace/logout',{'csrf':csrf},form=True,origin=base)[0]==303)
@@ -93,9 +98,8 @@ def journey(base):
     check('Backup inaccessible after logout',request(admin,'/ops/solace/chat-backup.json')[0]==401)
     check('Login screen restored after logout','Unlock panel' in request(admin,'/ops/solace')[1])
     login()
-    cookie=next(cookie for cookie in jar if cookie.name==app.config['SESSION_COOKIE_NAME'])
-    serializer=app.session_interface.get_signing_serializer(app)
-    signed=serializer.loads(cookie.value);signed['ops_issued']=time.time()-1801;cookie.value=serializer.dumps(signed)
+    with closing(sqlite3.connect(Path(app.instance_path)/'solace-admin.db')) as connection:
+        connection.execute('UPDATE admin_sessions SET expires=?',(time.time()-1,));connection.commit()
     check('Expired admin session denied',request(admin,'/ops/solace/data')[0]==401)
     login()
 
@@ -143,6 +147,18 @@ def journey(base):
         observed=request(viewer,path)[1]
         check('Two-user playback sync '+str(position)+' '+str(playing),status==200 and observed['position']==position and bool(observed['playing'])==playing)
     check('Basketball assets load',all(request(host,asset)[0]==200 for asset in ['/static/game.html','/static/basketball.js','/static/basketball.css','/static/tictactoe.html']))
+    replay={'action':'chat','body':'Exactly one acknowledged message'}
+    header={'X-Request-ID':'http-retry-chat-0001'}
+    request(host,path,replay,origin=base,extra=header);status,snapshot,_=request(host,path,replay,origin=base,extra=header)
+    check('Lost-response chat retry delivers once',status==200 and sum(m['body']==replay['body'] for m in snapshot['messages'])==1)
+    count=len(snapshot['queue']);header={'X-Request-ID':'http-retry-add-0001'}
+    for _ in range(2):status,snapshot,_=request(guest,path,{'action':'add','url':'aqz-KE-bpKQ'},origin=base,extra=header)
+    check('Video-add retry has one effect',status==200 and len(snapshot['queue'])==count+1)
+    revision=snapshot['playback_revision']
+    status,clock,_=request(guest,path,{'action':'playback','position':65,'playing':False,'compact':True,'expected_revision':revision},origin=base)
+    check('Playback command receives a server revision',status==200 and clock['playback_revision']==revision+1)
+    status,_,_=request(host,path,{'action':'playback','position':0,'playing':True,'source':'observation','expected_revision':revision},origin=base)
+    check('Old player observation cannot override a newer command',status==409 and not request(guest,path)[1]['playing'])
     status,_,headers=request(host,'/static/media/for-jaanu.mp4',extra={'Range':'bytes=0-1023'})
     check('Love video supports byte-range playback',status==206 and headers['Content-Range'].startswith('bytes 0-1023/'))
     request(host,path+'/leave',{},origin=base);_,left,_=request(guest,path+'/leave',{},origin=base)

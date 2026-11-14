@@ -19,10 +19,25 @@ from flask.sessions import SecureCookieSessionInterface
 app = Flask(__name__)
 Path(app.instance_path).mkdir(exist_ok=True)
 key_file = Path(app.instance_path) / 'secret'
-if not key_file.exists():
-    key_file.write_text(secrets.token_hex(32))
-app.secret_key = os.environ.get('SECRET_KEY') or key_file.read_text()
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', MAX_CONTENT_LENGTH=16384, PERMANENT_SESSION_LIFETIME=timedelta(days=365))
+configured_secret=os.environ.get('SECRET_KEY')
+if configured_secret:
+    app.secret_key=configured_secret
+else:
+    try:
+        descriptor=os.open(key_file,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    except FileExistsError:pass
+    else:
+        with os.fdopen(descriptor,'w') as output:
+            output.write(secrets.token_hex(32));output.flush();os.fsync(output.fileno())
+    # An exclusive creator may still be finishing its tiny write in another worker.
+    for attempt in range(40):
+        try:saved_secret=key_file.read_text()
+        except PermissionError:saved_secret=''
+        if saved_secret.strip():
+            app.secret_key=saved_secret;break
+        time.sleep(.025)
+    else:raise RuntimeError('The saved server secret is unavailable; keep the existing instance directory and retry startup.')
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', MAX_CONTENT_LENGTH=16384, PERMANENT_SESSION_LIFETIME=timedelta(days=365), ROOM_RECONNECT_GRACE_SECONDS=1800)
 
 class HttpsSessionInterface(SecureCookieSessionInterface):
     def get_cookie_secure(self, application):
@@ -112,6 +127,8 @@ def db():
     if 'db' not in g:
         g.db = sqlite3.connect(Path(app.instance_path) / 'afterglow.db', timeout=15)
         g.db.row_factory = sqlite3.Row
+        g.db.execute('PRAGMA busy_timeout=5000')
+        g.db.execute('PRAGMA foreign_keys=ON')
     return g.db
 
 @app.teardown_appcontext
@@ -121,6 +138,7 @@ def close_db(error):
 
 with app.app_context():
     db().executescript('''
+    BEGIN IMMEDIATE;
     CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, name TEXT, host TEXT, video TEXT, playing INTEGER DEFAULT 0, position REAL DEFAULT 0, updated REAL);
     CREATE TABLE IF NOT EXISTS members(room TEXT, id TEXT, name TEXT, seen REAL, PRIMARY KEY(room,id));
     CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT, name TEXT, body TEXT, created REAL);
@@ -131,6 +149,8 @@ with app.app_context():
     CREATE TABLE IF NOT EXISTS room_ads(room TEXT PRIMARY KEY,active INTEGER NOT NULL,updated REAL NOT NULL);
     CREATE INDEX IF NOT EXISTS message_room_idx ON messages(room,id);
     ''')
+    db().execute('CREATE TABLE IF NOT EXISTS app_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
+    db().execute('INSERT OR IGNORE INTO app_metadata VALUES(?,?)',('generation',secrets.token_hex(16)))
     if 'sort_order' not in {column['name'] for column in db().execute('PRAGMA table_info(queue)')}:
         db().execute('ALTER TABLE queue ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0')
         db().execute('UPDATE queue SET sort_order=id')
@@ -143,6 +163,18 @@ with app.app_context():
         db().execute('ALTER TABLE messages ADD COLUMN reply_to INTEGER')
     db().execute('CREATE TABLE IF NOT EXISTS participant_ads(room TEXT,id TEXT,active INTEGER NOT NULL,updated REAL NOT NULL,started REAL NOT NULL,PRIMARY KEY(room,id))')
     db().execute('CREATE TABLE IF NOT EXISTS room_games(room TEXT PRIMARY KEY,state TEXT NOT NULL)')
+    if 'playback_revision' not in {column['name'] for column in db().execute('PRAGMA table_info(rooms)')}:
+        db().execute('ALTER TABLE rooms ADD COLUMN playback_revision INTEGER NOT NULL DEFAULT 0')
+    if 'command_revision' not in {column['name'] for column in db().execute('PRAGMA table_info(rooms)')}:
+        db().execute('ALTER TABLE rooms ADD COLUMN command_revision INTEGER NOT NULL DEFAULT 0')
+        db().execute('UPDATE rooms SET command_revision=playback_revision')
+    db().executescript("""
+    CREATE TABLE IF NOT EXISTS mutation_receipts(room TEXT,actor TEXT,request_id TEXT,payload_hash TEXT,result TEXT,created REAL,PRIMARY KEY(room,actor,request_id));
+    CREATE INDEX IF NOT EXISTS receipt_time ON mutation_receipts(created);
+    CREATE TABLE IF NOT EXISTS reliability_metrics(minute INTEGER,name TEXT,count INTEGER,total REAL,maximum REAL,PRIMARY KEY(minute,name));
+    CREATE INDEX IF NOT EXISTS member_room_seen ON members(room,seen);
+    CREATE INDEX IF NOT EXISTS queue_room_order ON queue(room,sort_order,id);
+    """)
     db().commit()
 
 @app.before_request
@@ -159,14 +191,14 @@ def identity():
 
 
 def delete_room_records(room_id):
-    for table in ('messages','queue','typing','presence','room_ads','participant_ads','room_games','members'):
+    for table in ('messages','queue','typing','presence','room_ads','participant_ads','room_games','mutation_receipts','members'):
         db().execute(f'DELETE FROM {table} WHERE room=?',(room_id,))
     db().execute('DELETE FROM rooms WHERE id=?',(room_id,))
 
 
 def cleanup_empty_rooms():
     """Expire abandoned rooms when the next API request reaches this worker."""
-    cutoff=time.time()-120
+    cutoff=time.time()-max(120,int(app.config['ROOM_RECONNECT_GRACE_SECONDS']))
     expired=db().execute('SELECT id FROM rooms WHERE updated<? AND NOT EXISTS (SELECT 1 FROM members WHERE members.room=rooms.id AND members.seen>=?)',(cutoff,cutoff)).fetchall()
     if not expired:return
     db().execute('BEGIN IMMEDIATE')
@@ -199,9 +231,16 @@ def index():
     return render_template('index.html')
 
 
+def release_info():
+    try:return json.loads(Path(__file__).with_name('release.json').read_text())
+    except (OSError,ValueError):return {'version':'development'}
+
+
+CURRENT_RELEASE=release_info()
+
 @app.get('/api/health')
 def health():
-    return jsonify(application='afterglow', protocol=1, status='ok', capabilities=['room_leave_v2','shared_playback_v3','tictactoe_v1','basketball_v1','chat_identity_v1','room_experience_v4'])
+    return jsonify(application='solace', release=CURRENT_RELEASE, reconnect_grace_seconds=app.config['ROOM_RECONNECT_GRACE_SECONDS'], protocol=1, status='ok', capabilities=['room_leave_v2','shared_playback_v3','tictactoe_v1','basketball_v1','chat_identity_v1','room_experience_v4','ordered_playback_v1','safe_retries_v1'])
 
 
 @app.get('/api/profile')
@@ -253,9 +292,44 @@ def browse_videos():
     except YouTubeError as error:
         return jsonify(error=str(error), code=error.code), 502
 
+def mutation_token(data):
+    token=request.headers.get('X-Request-ID') or data.get('request_id')
+    if token is None:return None,None
+    if not isinstance(token,str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{8,100}',token):
+        raise ValueError('Invalid request ID.')
+    body={key:value for key,value in data.items() if key!='request_id'}
+    digest=hashlib.sha256(json.dumps(body,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    return token,digest
+
+
+def receipt(room_id,token,digest):
+    if not token:return None
+    saved=db().execute('SELECT payload_hash,result FROM mutation_receipts WHERE room=? AND actor=? AND request_id=?',(room_id,session['uid'],token)).fetchone()
+    if saved and saved['payload_hash']!=digest:raise ValueError('Request ID already used for another action.')
+    return json.loads(saved['result']) if saved else None
+
+
+def save_receipt(room_id,token,digest,result=None):
+    if not token:return
+    db().execute('INSERT INTO mutation_receipts VALUES(?,?,?,?,?,?)',(room_id,session['uid'],token,digest,json.dumps(result or {'ok':True}),time.time()))
+    db().execute('DELETE FROM mutation_receipts WHERE created<?',(time.time()-86400,))
+
+
+def reliability_record(name,value=1):
+    minute=int(time.time()//60)
+    db().execute('INSERT INTO reliability_metrics VALUES(?,?,1,?,?) ON CONFLICT(minute,name) DO UPDATE SET count=count+1,total=total+excluded.total,maximum=MAX(maximum,excluded.maximum)',(minute,name,value,value))
+
+
 @app.post('/api/rooms')
 def create_room():
     data = request.get_json(silent=True) or {}
+    try:token,digest=mutation_token(data)
+    except ValueError as error:return jsonify(error=str(error)),400
+    db().execute('BEGIN IMMEDIATE')
+    try:saved=receipt('__create__',token,digest)
+    except ValueError as error:return jsonify(error=str(error)),409
+    if saved:
+        db().rollback();return jsonify(saved),201
     name = str(data.get('name', 'Late night lounge')).strip()[:60] or 'Late night lounge'
     for _ in range(20):
         room_id = str(secrets.randbelow(900000)+100000)
@@ -266,17 +340,30 @@ def create_room():
             continue
     else:
         return jsonify(error='Could not create a room right now. Please try again.'),503
+    save_receipt('__create__',token,digest,{'id':room_id})
     db().commit()
     return jsonify(id=room_id), 201
 
 @app.route('/api/rooms/<room_id>', methods=['GET', 'POST'])
 def room(room_id):
+    if request.method=='POST':db().execute('BEGIN IMMEDIATE')
     room = db().execute('SELECT * FROM rooms WHERE id=?', (room_id,)).fetchone()
     if not room:
         return jsonify(error='Room not found. Create a new room or check your invite link.'), 404
+    if request.method=='GET' and not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
     now = time.time()
     data = request.get_json(silent=True) or {}
-    if request.method == 'POST':
+    token=digest=None
+    replayed=False
+    mutation_result=None
+    if request.method=='POST':
+        try:
+            token,digest=mutation_token(data)
+            mutation_result=receipt(room_id,token,digest)
+            replayed=mutation_result is not None
+        except ValueError as error:return jsonify(error=str(error)),409
+    if replayed and not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
+    if request.method == 'POST' and not replayed:
         action = data.get('action')
         name = str(data.get('name', 'Guest')).strip()[:24] or 'Guest'
         if action == 'join':
@@ -328,7 +415,6 @@ def room(room_id):
                     direction = data.get('direction')
                     if direction not in ('up','down'):
                         return jsonify(error='Choose up or down.'),400
-                    db().execute('BEGIN IMMEDIATE')
                     items = db().execute('SELECT id,sort_order FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,)).fetchall()
                     index = next((i for i,item in enumerate(items) if item['id']==data.get('id')),None)
                     if index is None:
@@ -350,8 +436,15 @@ def room(room_id):
                         return jsonify(error='Enter a valid YouTube video.'),400
                     db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=?,playback_id=? WHERE id=?',(video,now,secrets.token_hex(12),room_id))
                 elif action == 'playback':
+                    source=data.get('source','command')
+                    if source not in ('command','observation'):return jsonify(error='Invalid playback source.'),400
+                    if source=='observation' and room['host']!=session['uid']:return jsonify(error='Only the host publishes observations.'),403
+                    expected=data.get('expected_revision')
+                    if 'expected_revision' in data and (type(expected) is not int or expected<0 or expected>room['playback_revision'] or (source=='observation' and expected!=room['playback_revision']) or (source=='command' and expected<room['command_revision'])):
+                        return jsonify(error='Playback changed. Refresh room state.',code='stale_playback',playback_revision=room['playback_revision']),409
+                    if 'expected_playback_id' in data and data['expected_playback_id']!=room['playback_id']:return jsonify(error='The video changed.',code='stale_playback'),409
+                    if source=='observation' and 'expected_revision' not in data:return jsonify(error='Refresh playback before publishing.'),409
                     if 'expected_updated' in data:
-                        db().execute('BEGIN IMMEDIATE')
                         latest=db().execute('SELECT updated FROM rooms WHERE id=?',(room_id,)).fetchone()
                         if data['expected_updated']!=latest['updated']:return jsonify(error='Playback changed. Refresh room state.',code='stale_playback'),409
                     try:
@@ -364,7 +457,6 @@ def room(room_id):
                     db().execute('UPDATE rooms SET position=?,playing=?,updated=? WHERE id=?',(position,int(bool(data.get('playing'))),now,room_id))
                 else:
                     if action=='next':
-                        db().execute('BEGIN IMMEDIATE')
                         latest=db().execute('SELECT playback_id FROM rooms WHERE id=?',(room_id,)).fetchone()
                         if not latest or ('expected_playback_id' in data and data['expected_playback_id']!=latest['playback_id']):
                             return jsonify(error='The queue has already advanced.',code='stale_playback'),409
@@ -379,13 +471,21 @@ def room(room_id):
                         db().execute('UPDATE rooms SET playing=0,updated=?,playback_id=? WHERE id=?',(now,secrets.token_hex(12),room_id))
             else:
                 return jsonify(error='Unknown action.'),400
+        if data.get('action') in ('playback','watch','select','next'):
+            db().execute('UPDATE rooms SET playback_revision=playback_revision+1 WHERE id=?',(room_id,))
+            if data.get('action')!='playback' or data.get('source','command')=='command':db().execute('UPDATE rooms SET command_revision=playback_revision WHERE id=?',(room_id,))
+        if data.get('action')=='playback':
+            clock=db().execute('SELECT updated,playback_id,playback_revision FROM rooms WHERE id=?',(room_id,)).fetchone()
+            mutation_result={'ok':True,**dict(clock)}
+        save_receipt(room_id,token,digest,mutation_result)
         db().commit()
+    elif replayed:
+        reliability_record('mutation_replay');db().commit()
     db().execute('UPDATE members SET seen=? WHERE room=? AND id=? AND seen<?',(now,room_id,session['uid'],now-1))
     db().commit()
     if request.method == 'POST' and data.get('action') == 'playback' and data.get('compact'):
-        clock=db().execute('SELECT updated,playback_id FROM rooms WHERE id=?',(room_id,)).fetchone()
-        if not clock:return jsonify(error='Room not found.'),404
-        return jsonify(ok=True,updated=clock['updated'],playback_id=clock['playback_id'])
+        return jsonify(mutation_result)
+    db().execute('BEGIN')
     room = dict(db().execute('SELECT * FROM rooms WHERE id=?',(room_id,)).fetchone())
     host_id = room.pop('host')
     room['is_host'] = host_id == session['uid']
@@ -396,7 +496,9 @@ def room(room_id):
 
     host = db().execute('SELECT seen FROM members WHERE room=? AND id=?',(room_id,host_id)).fetchone()
     room['can_claim_host'] = not host or now-host['seen'] >= 30
-    room['server_time'] = now
+    room['release_version']=CURRENT_RELEASE.get('version','development')
+    room['server_time'] = time.time()
+    room['storage_generation']=db().execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0]
     room['members']=[dict(x) for x in db().execute('SELECT members.name,members.id,members.seen,COALESCE(presence.active,1) AS presence_active FROM members LEFT JOIN presence ON members.room=presence.room AND members.id=presence.id WHERE members.room=? ORDER BY members.seen DESC LIMIT 100',(room_id,))]
     for member in room['members']:
         member['you'] = member['id'] == session['uid']
@@ -415,6 +517,7 @@ def room(room_id):
             after=int(request.args['after'])
             if not 0<=after<=9223372036854775807:raise ValueError()
         except (ValueError,TypeError):return jsonify(error='Invalid chat cursor.'),400
+    if request.args.get('generation') and request.args['generation']!=room['storage_generation']:after=None
     room['messages_delta']=after is not None
     query='SELECT m.id,m.name,m.body,m.created,m.sender,r.id AS reply_id,r.name AS reply_name,r.body AS reply_body FROM messages m LEFT JOIN messages r ON r.room=m.room AND r.id=m.reply_to WHERE m.room=?'
     if after is not None:query+=' AND m.id>?'
@@ -430,6 +533,18 @@ def room(room_id):
     room['queue'] = [dict(x) for x in db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,))]
     return jsonify(room)
 
+@app.post('/api/rooms/<room_id>/telemetry')
+def room_telemetry(room_id):
+    if not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
+    data=request.get_json(silent=True) or {}
+    name=data.get('name');value=data.get('value',1)
+    if name not in ('playback_drift_ms','reconnect','stale_snapshot') or type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<=600000:
+        return jsonify(error='Invalid metric.'),400
+    reliability_record(name,value)
+    db().execute('DELETE FROM reliability_metrics WHERE minute<?',(int(time.time()//60)-30*1440,));db().commit()
+    return jsonify(ok=True)
+
+
 @app.post('/api/rooms/<room_id>/presence')
 def room_presence(room_id):
     if not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
@@ -439,6 +554,18 @@ def room_presence(room_id):
     else:db().execute('DELETE FROM typing WHERE room=? AND id=?',(room_id,session['uid']))
     db().commit()
     return jsonify(ok=True)
+
+
+@app.post('/api/rooms/<room_id>/diagnostics')
+def client_diagnostics(room_id):
+    member=db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone()
+    if not member:return jsonify(error='Join the room first.'),403
+    room=db().execute('SELECT host,playing,playback_revision FROM rooms WHERE id=?',(room_id,)).fetchone()
+    if not room:return jsonify(error='Room not found.'),404
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict) or len(request.data)>8192:return jsonify(error='Invalid diagnostics.'),400
+    saved=app.extensions['solace_ops']['record_client'](room_id,'host' if room['host']==session['uid'] else 'peer',data,{'server_playing':bool(room['playing']),'playback_revision':room['playback_revision']})
+    return jsonify(ok=True,saved=saved),202
 
 
 @app.post('/api/rooms/<room_id>/leave')
@@ -465,6 +592,29 @@ def leave_room(room_id):
             db().execute('DELETE FROM room_ads WHERE room=?',(room_id,))
     db().commit()
     return jsonify(ok=True,room_deleted=empty)
+
+def reliability_snapshot():
+    rows=db().execute('SELECT name,SUM(count) AS samples,SUM(total) AS total,MAX(maximum) AS maximum FROM reliability_metrics WHERE minute>=? GROUP BY name',(int(time.time()//60)-60,)).fetchall()
+    return [dict(row) for row in rows]
+
+app.extensions['solace_reliability']=reliability_snapshot
+
+@app.after_request
+def reliability_response(response):
+    if request.path.startswith('/api/rooms/') and response.status_code==409:
+        try:
+            db().rollback();reliability_record('command_conflict');db().commit()
+        except sqlite3.Error:pass
+    return response
+
+@app.errorhandler(sqlite3.OperationalError)
+def storage_unavailable(error):
+    if 'locked' in str(error).lower() or 'busy' in str(error).lower():
+        db().rollback()
+        response=jsonify(error='The room is busy. Please retry.',code='storage_busy')
+        response.status_code=503;response.headers['Retry-After']='1';return response
+    app.logger.error('Room storage operation failed')
+    return jsonify(error='Room storage is unavailable.',code='storage_unavailable'),503
 
 from room_game import register_game
 register_game(app,db)

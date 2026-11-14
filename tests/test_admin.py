@@ -76,8 +76,25 @@ class PrivatePanelTests(unittest.TestCase):
         self.assertEqual(self.admin.post('/ops/solace',data={'csrf':token,'password':self.password}).status_code,429)
         other=app.test_client();page=other.get('/ops/solace');token=re.search(r'name="csrf" value="([^"]+)"',page.text).group(1)
         self.assertEqual(other.post('/ops/solace',data={'csrf':token,'password':self.password},environ_overrides={'REMOTE_ADDR':'192.0.2.17'}).status_code,303)
-        with other.session_transaction() as session:session['ops_issued']=time.time()-1801
+        with closing(sqlite3.connect(Path(app.instance_path)/'solace-admin.db')) as connection:
+            connection.execute('UPDATE admin_sessions SET expires=?',(time.time()-1,));connection.commit()
         self.assertEqual(other.get('/ops/solace/data').status_code,401)
+
+    def test_logout_cannot_be_undone_by_replaying_inflight_cookies(self):
+        self.assertEqual(self.login().status_code,303)
+        old_room=self.admin.get_cookie('session').value
+        old_ops=self.admin.get_cookie('solace_ops',path='/ops/solace').value
+        with self.admin.session_transaction() as saved:csrf=saved['ops_csrf']
+        self.assertEqual(self.admin.post('/ops/solace/logout',data={'csrf':csrf}).status_code,303)
+        self.admin.set_cookie('session',old_room)
+        self.admin.set_cookie('solace_ops',old_ops,path='/ops/solace')
+        self.assertEqual(self.admin.get('/ops/solace/data').status_code,401)
+        self.assertEqual(self.admin.get('/ops/solace/chat-backup.json').status_code,401)
+        # Room responses cannot erase a newly established, path-scoped admin login.
+        self.admin.delete_cookie('solace_ops',path='/ops/solace')
+        self.assertEqual(self.login().status_code,303)
+        self.admin.delete_cookie('session')
+        self.assertEqual(self.admin.get('/ops/solace/data').status_code,200)
 
     def test_backup_survives_room_deletion_and_ip_matches_are_private(self):
         f=self.fixture
@@ -148,5 +165,42 @@ class PrivatePanelTests(unittest.TestCase):
         self.login();response=self.admin.get('/ops/solace/chat-backup.json')
         self.assertEqual(json.loads(response.data)['messages'][0]['body'],'Existing history');response.close()
 
+
+    def test_diagnostics_are_member_only_private_and_server_assigns_roles(self):
+        f=self.fixture;route=f.url+'/diagnostics'
+        self.assertEqual(app.test_client().post(route,json={}).status_code,403)
+        before=f.host.get(f.url).json['playback_revision']
+        payload={'client':'web','platform':'iPhone','playback':'playing','position':12,'drift_ms':21,'keyboard':True,'typing':True,'role':'host','ip':'secret-fake-ip','password':'never-store-this','draft':'never-store-this','width':390,'height':504,'volume':50,'screen':'watch','visibility':'visible','request_rtt_ms':18}
+        for client in [f.host,f.guest]:self.assertEqual(client.post(route,json=payload).status_code,202)
+        self.assertEqual(f.host.get(f.url).json['playback_revision'],before)
+        self.assertEqual(self.admin.get('/ops/solace/data').status_code,401)
+        self.login();data=self.admin.get('/ops/solace/data').json
+        reports=data['client_diagnostics'];self.assertEqual({r['role'] for r in reports},{'host','peer'})
+        self.assertEqual(len(data['diagnostic_history']),2)
+        self.assertNotIn('never-store-this',json.dumps(reports));self.assertNotIn('secret-fake-ip',json.dumps(reports))
+        for report in reports:self.assertTrue(report['details']['typing']);self.assertEqual(report['details']['width'],390)
+
+    def test_diagnostics_validation_rate_bound_and_logging_failure_do_not_break_room(self):
+        f=self.fixture;route=f.url+'/diagnostics'
+        self.assertEqual(f.host.post(route,json=[]).status_code,400)
+        first=f.host.post(route,json={'client':'web','position':-1,'duration':True,'drift_ms':700000,'width':999999,'playback':'invented','platform':'<script>alert(1)</script>'})
+        self.assertTrue(first.json['saved']);self.assertFalse(f.host.post(route,json={'position':20}).json['saved'])
+        self.login();details=self.admin.get('/ops/solace/data').json['client_diagnostics'][0]['details']
+        for key in ('position','duration','drift_ms','width','playback'):self.assertNotIn(key,details)
+        self.assertNotIn('<',details['platform'])
+        with closing(sqlite3.connect(Path(app.instance_path)/'solace-admin.db')) as connection:
+            connection.execute('DROP TABLE client_diagnostics');connection.commit()
+        response=f.host.post(route,json={'client':'web'});self.assertEqual(response.status_code,202);self.assertFalse(response.json['saved'])
+        self.assertEqual(f.host.get(f.url).status_code,200)
+
+    def test_diagnostics_retention_purges_snapshots_and_history(self):
+        self.fixture.host.post(self.fixture.url+'/diagnostics',json={'client':'web'})
+        self.login();now=time.time()
+        with closing(sqlite3.connect(Path(app.instance_path)/'solace-admin.db')) as connection:
+            connection.execute('UPDATE client_diagnostics SET received=?',(now-31*86400,))
+            connection.execute('UPDATE diagnostic_events SET created=?',(now-31*86400,))
+            connection.execute('UPDATE admin_sessions SET expires=?',(now+7200,));connection.commit()
+        with patch('admin_panel.time.time',return_value=now+3601):data=self.admin.get('/ops/solace/data').json
+        self.assertEqual(data['client_diagnostics'],[]);self.assertEqual(data['diagnostic_history'],[])
 
 if __name__=='__main__':unittest.main()

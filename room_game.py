@@ -49,7 +49,7 @@ def register_game(app, db):
             state['basketball']=game
             connection.execute('INSERT INTO room_games VALUES(?,?) ON CONFLICT(room) DO UPDATE SET state=excluded.state',(room_id,json.dumps(state)))
         connection.commit()
-        return jsonify(**{k:v for k,v in game.items() if k!='players'},players={mark:members[uid] for mark,uid in game['players'].items()},you=role)
+        return jsonify(storage_generation=connection.execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0],**{k:v for k,v in game.items() if k!='players'},players={mark:members[uid] for mark,uid in game['players'].items()},you=role)
 
     @app.route('/api/rooms/<room_id>/game', methods=['GET', 'POST'])
     def room_game(room_id):
@@ -95,4 +95,4 @@ def register_game(app, db):
             else:return jsonify(error='Unknown game action.'),400
             connection.execute('INSERT INTO room_games VALUES(?,?) ON CONFLICT(room) DO UPDATE SET state=excluded.state',(room_id,json.dumps(game)))
         connection.commit()
-        return jsonify(board=game['board'],players={mark:members[uid] for mark,uid in game['players'].items()},you=role,turn=game['turn'],winner=game['winner'],revision=game['revision'])
+        return jsonify(storage_generation=connection.execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0],board=game['board'],players={mark:members[uid] for mark,uid in game['players'].items()},you=role,turn=game['turn'],winner=game['winner'],revision=game['revision'])
