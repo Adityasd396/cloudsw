@@ -145,6 +145,9 @@ class WatchPartyTests(unittest.TestCase):
         stale=self.host.post(endpoint,json={'action':'reset','revision':0})
         self.assertEqual(stale.status_code,409)
         game=self.host.post(endpoint,json={'action':'reset','revision':game['revision']}).json
+        self.assertEqual(game['winner'],'X');self.assertEqual(game['rematch_votes'],['X'])
+        game=self.guest.post(endpoint,json={'action':'reset','revision':game['revision']}).json
+        self.assertEqual(game['turn'],'O')
         self.assertEqual(game['board'],['']*9)
         self.assertIsNone(game['winner'])
         for client in (self.host,self.guest,spectator):client.post(self.url+'/leave',json={})
@@ -224,7 +227,8 @@ class WatchPartyTests(unittest.TestCase):
                 self.assertEqual(found['items'][0]['title'],'A & B')
                 self.assertEqual(found['next_page'],'next-token')
                 self.assertNotIn(key,str(found))
-                self.assertEqual(youtube.call_args.args[0]['videoEmbeddable'],'true')
+                self.assertNotIn('videoEmbeddable',youtube.call_args.args[0])
+                self.assertNotIn('videoSyndicated',youtube.call_args.args[0])
         self.assertEqual(self.host.post('/api/settings/youtube',json={'key':'short'}).status_code,409)
         self.assertFalse(self.host.get('/api/settings').json['can_configure'])
         self.assertEqual(self.host.post('/api/settings/youtube',json={'key':key},environ_overrides={'REMOTE_ADDR':'192.168.0.2'}).status_code,403)

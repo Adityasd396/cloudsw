@@ -106,7 +106,7 @@ def register_admin(app):
     def record_client(room,role,payload,server_details):
         if not isinstance(payload,dict):return False
         details={}
-        choices={'client':('web','native'),'visibility':('visible','hidden','background'),'connection':('online','offline'),'orientation':('portrait','landscape'),'playback':('playing','paused','buffering','ended','loading','error','unavailable','ad'),'screen':('watch','search','queue','games','game','room'),'network_type':('slow-2g','2g','3g','4g','unknown'),'error':('none','player_error','network_error')}
+        choices={'client':('web','native'),'visibility':('visible','hidden','background'),'connection':('online','offline'),'orientation':('portrait','landscape'),'playback':('playing','paused','buffering','ended','loading','error','unavailable','ad'),'screen':('watch','search','queue','games','game','room','settings','privacy'),'network_type':('slow-2g','2g','3g','4g','unknown'),'error':('none','player_error','network_error')}
         for key,values in choices.items():
             if payload.get(key) in values:details[key]=payload[key]
         for key in ('platform','release','language','timezone'):

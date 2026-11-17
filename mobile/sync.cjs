@@ -1,8 +1,10 @@
+const {isDirectUrl}=require('./direct-stream.cjs');
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com']);
 function isYoutubeUrl(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && YOUTUBE_HOSTS.has(url.hostname); } catch { return false; }
 }
 function parseVideo(value) {
+  if(isDirectUrl(value))return value;
   try {
     const url = new URL(value);
     if (!isYoutubeUrl(value)) return null;
@@ -11,7 +13,7 @@ function parseVideo(value) {
   } catch { return null; }
 }
 const OBSERVER_SCRIPT = `(() => {
-  if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)) return;
+  if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)&&!window.__solaceDirectSource) return;
   if (window.__afterglowObserver) return;
   window.__afterglowObserver = true;
   const hooked=new WeakSet();
@@ -21,7 +23,7 @@ const OBSERVER_SCRIPT = `(() => {
     if(!hooked.has(video)){hooked.add(video);for(const event of ['play','pause','seeked','ended'])video.addEventListener(event,send)}
     if(!video.paused)window.__afterglowBlocked=false;
     const ad = Boolean(document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay'));
-    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,buffering:video.readyState<3,seeking:video.seeking,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'playback',url:window.__solaceDirectSource||location.href,title:document.title.replace(/ - YouTube$/, '').slice(0,150),videoWidth:video.videoWidth,videoHeight:video.videoHeight,position:video.currentTime,playing:!video.paused&&!video.ended,ended:video.ended,ready:video.readyState>=2,buffering:video.readyState<3,seeking:video.seeking,ad,blocked:window.__afterglowBlocked===true,live:!Number.isFinite(video.duration)}));
   };
   setInterval(send, 1000);
   send();
@@ -29,7 +31,7 @@ const OBSERVER_SCRIPT = `(() => {
 function buildApplyScript(position, playing, force=false) {
   if (!Number.isFinite(position) || position < 0) throw new Error('Invalid playback position');
   return `(() => {
-    if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)) return;
+    if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)&&!window.__solaceDirectSource) return;
     if (document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay')) return;
     const video=document.querySelector('video');
     if (!video || video.readyState<2) return;
@@ -50,7 +52,7 @@ function buildApplyScript(position, playing, force=false) {
 }
 function buildVideoLayoutScript(enabled) {
   return `(() => {
-    if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)) return;
+    if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(location.hostname)&&!window.__solaceDirectSource) return;
     const existing=document.getElementById('afterglow-video-layout');
     if (!${Boolean(enabled)}) {
       if(existing)existing.remove();

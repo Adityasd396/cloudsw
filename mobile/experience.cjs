@@ -1,5 +1,5 @@
 function backAction({keyboardHeight,expanded,pickerMode,replyTo,tab,inRoom,entryMode}){
- if(keyboardHeight)return 'keyboard';if(expanded)return 'fullscreen';if(pickerMode)return 'picker';if(replyTo)return 'reply';if(tab!=='chat')return 'chat';if(!inRoom&&entryMode)return 'home';return 'stay';
+ if(keyboardHeight)return 'keyboard';if(expanded)return 'fullscreen';if(pickerMode)return 'picker';if(tab==='privacy')return 'settings';if(tab==='settings')return 'people';if(tab==='chat'&&replyTo)return 'reply';if(tab!=='chat')return 'chat';if(!inRoom&&entryMode)return 'home';return 'stay';
 }
 function videoHeight({expanded,width,height,keyboardHeight,platform,ratio}){
  const available=platform==='ios'?height-keyboardHeight:height;

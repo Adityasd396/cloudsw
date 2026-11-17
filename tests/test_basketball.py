@@ -32,13 +32,15 @@ class BasketballTests(unittest.TestCase):
         self.host.post(self.url+'/game',json={'action':'join'})
         for turn in range(9):
             client=self.host if turn%2==0 else self.guest
-            result=client.post(self.endpoint,json={'action':'shoot','aim':.5,'revision':state['revision']})
+            result=client.post(self.endpoint,json={'action':'shoot','aim':state['challenge']['target'],'power':state['challenge']['power'],'revision':state['revision']})
             self.assertEqual(result.status_code,200);state=result.json
         self.assertEqual(state['winner'],'X')
         self.assertEqual(state['scores'],{'X':5,'O':4})
         self.assertEqual(self.guest.get(self.endpoint).json['winner'],'X')
         self.assertEqual(self.guest.post(self.endpoint,json={'action':'shoot','aim':.5,'revision':state['revision']}).status_code,409)
         again=self.guest.post(self.endpoint,json={'action':'reset','revision':state['revision']}).json
+        self.assertIsNotNone(again['winner']);self.assertEqual(again['rematch_votes'],['O'])
+        again=self.host.post(self.endpoint,json={'action':'reset','revision':again['revision']}).json
         self.assertEqual(again['scores'],{'X':0,'O':0});self.assertIsNone(again['shot'])
         self.assertEqual(self.host.get(self.url+'/game').json['players'],{'X':'Host'})
 

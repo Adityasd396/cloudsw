@@ -25,6 +25,11 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(one.json,two.json)
 
     def test_playback_revision_survives_same_timestamp_and_rejects_old_observations(self):
+        # Freeze after both signed sessions exist; rewinding to room creation can
+        # make a newer session cookie appear to have a negative age.
+        import time
+        with app.app_context():
+            db().execute('UPDATE rooms SET updated=? WHERE id=?',(time.time(),self.url.rsplit('/',1)[1]));db().commit()
         state=self.host.get(self.url).json;revision=state['playback_revision']
         with patch('app.time.time',return_value=state['updated']):
             ack=self.guest.post(self.url,json={'action':'playback','position':42,'playing':True,'expected_revision':revision,'compact':True},headers={'X-Request-ID':'play-command-0001'}).json

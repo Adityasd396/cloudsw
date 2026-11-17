@@ -218,6 +218,8 @@ def video_id(value):
         return None
     if u.scheme not in ('http', 'https'):
         return None
+    if u.scheme=='https' and hostname and not u.username and not u.password and len(value)<=2048 and re.search(r'\.(mp4|webm|m4v|m3u8)$',u.path,re.I):
+        return value
     if hostname in ('youtu.be', 'www.youtu.be'):
         value = u.path.strip('/').split('/')[0]
     elif hostname in ('youtube.com', 'www.youtube.com', 'm.youtube.com'):
@@ -227,6 +229,8 @@ def video_id(value):
     return value if re.fullmatch(r'[\w-]{11}', value, flags=re.ASCII) else None
 
 @app.get('/')
+@app.get('/join')
+@app.get('/create')
 def index():
     return render_template('index.html')
 
@@ -278,12 +282,12 @@ def browse_videos():
     if time.time() - session.get('last_search', 0) < 1:
         return jsonify(error='Please wait a second before searching again.'), 429
     session['last_search'] = time.time()
-    params = {'key':key,'part':'snippet','type':'video','videoEmbeddable':'true','videoSyndicated':'true','maxResults':12,'q':query,'safeSearch':'moderate'}
+    params = {'key':key,'part':'snippet','type':'video','maxResults':20,'q':query,'safeSearch':'moderate'}
     if token:
         params['pageToken'] = token
     try:
         result = youtube_request(params, key)
-        data = {'items':[{'id':item['id']['videoId'],'title':html.unescape(item['snippet']['title']),'channel':html.unescape(item['snippet']['channelTitle'])} for item in result.get('items',[]) if item.get('id',{}).get('videoId')], 'next_page':result.get('nextPageToken'), 'source':'youtube', 'search_enabled':True}
+        data = {'items':[{'id':item['id']['videoId'],'title':html.unescape(item['snippet']['title']),'channel':html.unescape(item['snippet']['channelTitle']),'description':html.unescape(item['snippet'].get('description','')),'published':item['snippet'].get('publishedAt','')} for item in result.get('items',[]) if item.get('id',{}).get('videoId')], 'next_page':result.get('nextPageToken'), 'source':'youtube', 'search_enabled':True}
         with search_lock:
             if len(search_cache) >= 100:
                 search_cache.clear()
@@ -399,10 +403,10 @@ def room(room_id):
             elif action == 'add':
                 video = video_id(data.get('url', ''))
                 if not video:
-                    return jsonify(error='Enter a valid YouTube video link.'), 400
+                    return jsonify(error='Use a YouTube link or a direct HTTPS MP4, WebM or HLS URL.'), 400
                 if db().execute('SELECT count(*) FROM queue WHERE room=?',(room_id,)).fetchone()[0] >= 100:
                     return jsonify(error='The queue is full.'),400
-                db().execute('INSERT INTO queue(room,video,title,added_by,sort_order) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort_order),0)+1 FROM queue WHERE room=?))', (room_id,video,str(data.get('title','')).strip()[:100] or 'YouTube video',member['name'],room_id))
+                db().execute('INSERT INTO queue(room,video,title,added_by,sort_order) VALUES(?,?,?,?,(SELECT COALESCE(MAX(sort_order),0)+1 FROM queue WHERE room=?))', (room_id,video,str(data.get('title','')).strip()[:100] or ('Direct video' if video.startswith('https://') else 'YouTube video'),member['name'],room_id))
             elif action == 'claim_host':
                 host = db().execute('SELECT seen FROM members WHERE room=? AND id=?',(room_id,room['host'])).fetchone()
                 if host and now-host['seen'] < 30 and room['host'] != session['uid']:
@@ -433,7 +437,7 @@ def room(room_id):
                 elif action == 'watch':
                     video = video_id(data.get('url',''))
                     if not video:
-                        return jsonify(error='Enter a valid YouTube video.'),400
+                        return jsonify(error='Use a YouTube link or a direct HTTPS video URL.'),400
                     db().execute('UPDATE rooms SET video=?,position=0,playing=1,updated=?,playback_id=? WHERE id=?',(video,now,secrets.token_hex(12),room_id))
                 elif action == 'playback':
                     source=data.get('source','command')

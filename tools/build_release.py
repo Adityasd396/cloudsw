@@ -8,7 +8,7 @@ import shutil
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-SERVER={'app.py','room_game.py','admin_panel.py','setup_admin.py','requirements.txt','PYTHONANYWHERE.md','ADMIN-SETUP.md','DEPLOYMENT-RELIABILITY.md','release.json','tools/storage.py','tools/verify_deployment.py'}
+SERVER={'game_options.py','ludo_game.py','app.py','room_game.py','admin_panel.py','setup_admin.py','requirements.txt','PYTHONANYWHERE.md','ADMIN-SETUP.md','DEPLOYMENT-RELIABILITY.md','release.json','tools/storage.py','tools/verify_deployment.py'}
 
 def build(version):
     if not re.fullmatch(r'[0-9A-Za-z._-]{1,40}',version):raise ValueError('Invalid version')
@@ -17,13 +17,15 @@ def build(version):
     # A fresh release must be complete even if its old manifest was removed.
     names=set(SERVER)
     names.update(['README.md','RELEASE-NOTES.md','DEPLOYMENT.md','Dockerfile','.dockerignore','run.py','serve.py','run_mobile_server.py','launch_mobile.py','start.bat','start-mobile.bat'])
-    names.update(path.relative_to(ROOT).as_posix() for pattern in ['*.tsx','*.cjs','*.json','app.config.js','index.js','README.md','.easignore','scripts/*.cjs'] for path in (ROOT/'mobile').glob(pattern) if path.is_file())
+    names.update(path.relative_to(ROOT).as_posix() for pattern in ['*.ts','*.tsx','*.cjs','*.json','app.config.js','index.js','README.md','.easignore','scripts/*.cjs'] for path in (ROOT/'mobile').glob(pattern) if path.is_file())
     names.update(['HARDENING-REPORT.md','DEPLOYMENT-RELIABILITY.md','release.json','tools/storage.py','tools/build_release.py','tools/verify_deployment.py','mobile/transport.cjs','mobile/game-bridge.cjs','mobile/gestures.cjs','mobile/CuteGesture.tsx','solace-v2-watch.jpg','solace-v2-queue.jpg','solace-v2-room.jpg','solace-v2-keyboard.jpg','solace-v2-search-landscape.jpg'])
+    names.update(['solace-games-ttt.png','solace-games-hoops.png','solace-games-ludo.png'])
     names.add('mobile/GestureComposer.tsx')
     names.add('mobile/ClientDiagnostics.tsx')
+    names.add('tests/fixtures/stream-test.mp4')
     for folder,pattern in [('static','**/*'),('templates','**/*'),('tests','*.py'),('mobile/tests','*.test.cjs')]:
         names.update(path.relative_to(ROOT).as_posix() for path in (ROOT/folder).glob(pattern) if path.is_file() and '__pycache__' not in path.parts)
-    for template in ['templates/index.html','templates/admin.html','templates/admin-login.html','static/game.html','static/tictactoe.html']:
+    for template in ['templates/index.html','templates/admin.html','templates/admin-login.html','static/game.html','static/tictactoe.html','static/ludo.html']:
         path=ROOT/template
         source=path.read_text(encoding='utf-8')
         source=re.sub(r'<meta name="solace-release" content="[^"]*">','',source)

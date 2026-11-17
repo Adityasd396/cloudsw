@@ -14,10 +14,11 @@ const overlayRender=render;render=function(data){overlayRender(data);videoStage.
 setInterval(()=>{if(document.hidden)return;videoStage.classList.toggle('needs-media-gesture',!playerNotice.hidden);paintControls(overlayVisibility.update(!!state?.playing))},250);
 let landscapeExpanded=false;
 const landscapeQuery=window.matchMedia('(orientation: landscape) and (pointer: coarse)');
+function physicalPortrait(){const deviceScreen=window.screen;const type=deviceScreen?.orientation?.type;return type?type.startsWith('portrait'):!!deviceScreen&&deviceScreen.width<deviceScreen.height}
 function syncLandscape(){
- if(!state)return;
- if(landscapeQuery.matches&&!document.body.classList.contains('solace-fullscreen')&&document.activeElement!==$('message')&&!document.body.classList.contains('keyboard-open')&&!document.body.classList.contains('gesture-picker-open')){landscapeExpanded=true;document.body.classList.add('solace-fullscreen');revealControls()}
- else if(!landscapeQuery.matches&&landscapeExpanded){landscapeExpanded=false;exitSolaceFullscreen();revealControls()}
+ if(!state||typeof activeScreen!=='undefined'&&activeScreen!=='watch')return;
+ if(window.SolaceExperience?.autoFullscreen!==false&&landscapeQuery.matches&&!physicalPortrait()&&!document.body.classList.contains('solace-fullscreen')&&document.activeElement!==$('message')&&!document.body.classList.contains('keyboard-open')&&!document.body.classList.contains('gesture-picker-open')){landscapeExpanded=true;document.body.classList.add('solace-fullscreen');revealControls()}
+ else if((!landscapeQuery.matches||physicalPortrait())&&landscapeExpanded){landscapeExpanded=false;exitSolaceFullscreen();revealControls()}
  fullscreen.textContent=document.body.classList.contains('solace-fullscreen')?'⛶ Exit fullscreen':'⛶ Fullscreen';
 }
 landscapeQuery.addEventListener('change',syncLandscape);

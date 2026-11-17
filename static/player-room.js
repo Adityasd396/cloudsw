@@ -14,9 +14,10 @@ const entrySubmit=$('setupForm').onsubmit;$('setupForm').onsubmit=async event=>{
 
 const home=element('section','home-options');home.innerHTML='<div class="solace-identity"><span class="solace-mark" aria-hidden="true">s<span>·</span></span><h1>solace</h1><p>A place, comfort and peace</p></div><button class="primary" id="homeCreate">Create room</button><button class="subtle" id="homeJoin">Join room</button><p class="solace-dedication">With love, made for Jaanu <span aria-hidden="true">♡</span></p>';document.body.append(home);
 function showEntry(mode){home.hidden=true;document.body.classList.remove('home-only');openSetup(mode)}
-$('homeCreate').onclick=()=>showEntry('create');$('homeJoin').onclick=()=>showEntry('join');
-if(!roomId){document.body.classList.add('home-only');$('setup').hidden=true;joining=false}else home.hidden=true;
-const homeRender=render;render=function(data){homeRender(data);home.hidden=true;document.body.classList.remove('home-only')};
+$('homeCreate').onclick=()=>location.assign('/create');$('homeJoin').onclick=()=>location.assign('/join');
+if(!roomId){document.body.classList.add('home-only');$('setup').hidden=true;joining=false}else{home.hidden=true;document.body.classList.add('entry-open')};
+if(!roomId&&['/join','/create'].includes(location.pathname)){document.body.classList.add('entry-open');showEntry(location.pathname.slice(1))}
+const homeRender=render;render=function(data){homeRender(data);home.hidden=true;document.body.classList.remove('home-only','entry-open')};
 let playbackInFlight=false,latestPlayback=null;
 publishPlayback=async function(){if(!pageRecovery.canPublish()||!ready||!state?.is_host||Date.now()<applyingUntil||Date.now()<localControlUntil||controlBusy)return;latestPlayback={position:player.getCurrentTime(),playing:player.getPlayerState()===1};if(playbackInFlight)return;playbackInFlight=true;try{while(latestPlayback){const snapshot={...latestPlayback,expected_updated:state.updated,...(Number.isInteger(state.playback_revision)?{expected_revision:state.playback_revision,expected_playback_id:state.playback_id,source:'observation'}:{})};latestPlayback=null;const ack=await api('/api/rooms/'+roomId,{action:'playback',...snapshot,compact:true});if(Number.isInteger(ack.playback_revision))state.playback_revision=Math.max(state.playback_revision||0,ack.playback_revision)}}catch{latestPlayback=null}finally{playbackInFlight=false}};
 
