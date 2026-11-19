@@ -1,0 +1,41 @@
+{
+  "environment": "loopback Waitress, synthetic users; no production data",
+  "limits": "25 sequential samples; concurrency 2 then 4 for 12 reads each; no capacity or WAN claim",
+  "measurements": {
+    "room_poll": {
+      "samples": 25,
+      "p50_ms": 15.919,
+      "p95_ms": 27.275,
+      "mean_bytes": 1188,
+      "errors": 0
+    },
+    "discovery_page": {
+      "samples": 25,
+      "p50_ms": 29.288,
+      "p95_ms": 34.723,
+      "mean_bytes": 202,
+      "errors": 0
+    },
+    "private_inbox": {
+      "samples": 25,
+      "p50_ms": 16.128,
+      "p95_ms": 29.153,
+      "mean_bytes": 55,
+      "errors": 0
+    },
+    "room_reads_concurrency_2": {
+      "samples": 12,
+      "p50_ms": 19.452,
+      "p95_ms": null,
+      "max_ms": 25.388,
+      "errors": 0
+    },
+    "room_reads_concurrency_4": {
+      "samples": 12,
+      "p50_ms": 14.197,
+      "p95_ms": null,
+      "max_ms": 43.189,
+      "errors": 0
+    }
+  }
+}

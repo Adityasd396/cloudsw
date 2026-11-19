@@ -1,8 +1,9 @@
 // Chat-delivered gestures never take focus, pause playback, or cover controls.
 const gestureStream=new SolaceGestures.Stream();
+const chatGestureTimers=new Map();
 const gestureBadge=element('div','cute-gesture');gestureBadge.hidden=true;gestureBadge.setAttribute('role','status');gestureBadge.setAttribute('aria-live','polite');videoStage.append(gestureBadge);let gestureTimer=0;
 function hideGesture(){gestureBadge.hidden=true;clearTimeout(gestureTimer);gestureTimer=0}
-const gestureRender=render;render=function(data){gestureRender(data);const events=gestureStream.receive(data);if(document.hidden||activeScreen!=='watch'||loveOverlay){hideGesture();return}if(!events.length)return;const event=events.at(-1);gestureBadge.replaceChildren(element('span','gesture-art',event.emoji),element('span','',event.name+' · '+event.text));gestureBadge.hidden=false;clearTimeout(gestureTimer);gestureTimer=setTimeout(hideGesture,3200)};
+const gestureRender=render;render=function(data){gestureRender(data);for(const message of data.messages||[]){const gesture=SolaceGestures.parse(message.body);if(!gesture)continue;const row=$('messages').querySelector('[data-message-id="'+message.id+'"]');if(!row)continue;const text=row.querySelector('p');if(text)text.textContent=gesture.emoji+' '+gesture.text;const remaining=3000-(Date.now()-message.created*1000);if(remaining>0)row.classList.add('gesture-message');if(remaining>0&&!chatGestureTimers.has(message.id)){chatGestureTimers.set(message.id,setTimeout(()=>{$('messages').querySelector('[data-message-id="'+message.id+'"]')?.classList.remove('gesture-message');chatGestureTimers.delete(message.id)},Math.min(3000,remaining)))}}const events=gestureStream.receive(data);if(document.hidden||activeScreen!=='watch'||loveOverlay){hideGesture();return}if(!events.length)return;const event=events.at(-1);gestureBadge.replaceChildren(element('span','gesture-art',event.emoji),element('span','',event.name+' · '+event.text));gestureBadge.hidden=false;clearTimeout(gestureTimer);gestureTimer=setTimeout(hideGesture,event.effect?3000:3200);if(event.effect){showScreenReaction(event.effect);SolaceHaptics.pulse('goal')}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)hideGesture()});window.addEventListener('pagehide',hideGesture);
 
 // An in-flow tray reserves its own space above the composer, never over the keyboard.
@@ -26,3 +27,5 @@ document.addEventListener('pointerdown',event=>{if(!gestureTray.hidden&&!gesture
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!gestureTray.hidden){event.preventDefault();event.stopImmediatePropagation();closeGestureTray();gestureToggle.focus()}},true);
 new MutationObserver(()=>{if(activeScreen!=='watch')closeGestureTray()}).observe(document.body,{attributes:true,attributeFilter:['data-screen']});
 if(window.ResizeObserver)new ResizeObserver(()=>window.SolaceChat.layout()).observe(gestureTray);
+
+function showScreenReaction(kind){window.SolaceReactions?.show(kind)}

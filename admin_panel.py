@@ -7,6 +7,7 @@ import math
 import os
 import secrets
 import sqlite3
+import shutil
 import threading
 import time
 from contextlib import closing, contextmanager
@@ -92,7 +93,8 @@ def register_admin(app):
             sample['buckets'].clear();sample['flushed']=time.monotonic()
 
     def seed_archive():
-        """Owner-run setup can copy still-existing, recent room messages."""
+        """Explicit legacy archive opt-in only; reports retain separate minimal evidence."""
+        if not app.config.get("SOLACE_ROOM_ARCHIVE",False):return 0
         path=Path(app.instance_path)/'afterglow.db'
         if not path.exists():return 0
         with closing(sqlite3.connect(path,timeout=5)) as source, storage() as connection:
@@ -135,7 +137,7 @@ def register_admin(app):
             return True
         except (sqlite3.Error,OSError):return False
 
-    app.extensions['solace_ops']={'seed_archive':seed_archive,'record_client':record_client}
+    app.extensions['solace_ops']={'seed_archive':seed_archive,'record_client':record_client,'client_ip':client_ip}
 
     @app.before_request
     def operations_timer():g.ops_started=time.perf_counter()
@@ -146,6 +148,7 @@ def register_admin(app):
             # Preserve Origin on same-site form posts; no-referrer can produce Origin:null.
             response.headers.update({'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
             return response
+        if request.path.startswith(('/api/me/conversations','/api/me/media','/api/me/room-media','/api/me/world','/api/me/preferences')):return response
         if request.path!='/' and not request.path.startswith('/api/'):return response
         now=time.time();key=app.instance_path;uid=visitor();ip=client_ip()
         try:payload=request.get_json(silent=True) if request.is_json else {}
@@ -158,6 +161,8 @@ def register_admin(app):
             elif action=='join' and room and request.path=='/api/rooms/'+room:event='joined_room'
             elif request.path.endswith('/leave'):event='left_room'
             elif request.path.endswith('/presence'):event='active' if payload.get('active') else 'inactive'
+            elif request.path in ('/api/auth/signup','/api/auth/signin','/api/auth/signout','/api/me/delete-account'):
+                event={'/api/auth/signup':'account_created','/api/auth/signin':'account_signin','/api/auth/signout':'account_signout','/api/me/delete-account':'account_deleted'}[request.path]
         chat=response.status_code<400 and action=='chat' and room and request.path=='/api/rooms/'+room
         with lock:
             sample=metrics.setdefault(key,{'flushed':time.monotonic(),'buckets':{}})
@@ -169,7 +174,7 @@ def register_admin(app):
         try:
             with storage() as connection:
                 prior=connection.execute('SELECT name,active FROM visitors WHERE id=?',(uid,)).fetchone()
-                name=(str(payload.get('name','')).strip()[:24] or 'Guest') if event=='joined_room' else (prior['name'] if prior else 'Guest')
+                name=(str(payload.get('name','')).strip()[:24] or 'Guest') if event=='joined_room' else ('Deleted account' if event=='account_deleted' else getattr(g,'auth_event_name',None) or (prior['name'] if prior else 'Guest'))
                 active=0 if event in ('inactive','left_room') else 1 if event in ('active','joined_room','opened_site') or not prior else prior['active']
                 connection.execute('INSERT INTO visitors VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,ip=excluded.ip,agent=excluded.agent,last=excluded.last,last_join=COALESCE(excluded.last_join,visitors.last_join),last_leave=COALESCE(excluded.last_leave,visitors.last_leave),active=excluded.active',(uid,name,ip,request.user_agent.string[:200],now,now,now if event=='joined_room' else None,now if event=='left_room' else None,active))
                 connection.execute('INSERT INTO visitor_ips VALUES(?,?,?,?) ON CONFLICT(visitor,ip) DO UPDATE SET last=excluded.last',(uid,ip,now,now))
@@ -177,7 +182,7 @@ def register_admin(app):
                 if chat:
                     body=response.get_json(silent=True) or {}
                     message=next((m for m in reversed(body.get('messages',[])) if m.get('you') and m.get('body')==str(payload.get('body','')).strip()[:500]),None)
-                    if message:connection.execute('INSERT OR IGNORE INTO chat_archive VALUES(?,?,?,?,?,?,?)',(room,message['id'],uid,message['name'],message['body'],json.dumps(message.get('reply')),message['created']))
+                    if message and app.config.get('SOLACE_ROOM_ARCHIVE',False):connection.execute('INSERT OR IGNORE INTO chat_archive VALUES(?,?,?,?,?,?,?)',(room,message['id'],uid,message['name'],message['body'],json.dumps(message.get('reply')),message['created']))
                 purge(connection,now);flush(connection)
         except (sqlite3.Error,OSError):
             # Operational logging must not block or fail a room/chat request.
@@ -188,13 +193,16 @@ def register_admin(app):
         if not app.testing and not request.is_secure and request.remote_addr not in ('127.0.0.1','::1'):
             abort(403)
         value=credential()
-        if not value:abort(404)
+        if not value and not app.extensions['solace_staff']['has_staff']():abort(404)
         return value
 
     def authorized():
         value=configured();token=request.cookies.get('solace_ops')
         if not token:return False
         digest=hashlib.sha256(token.encode()).hexdigest()
+        staff=app.extensions['solace_staff'];auth=staff['authenticate'](digest)
+        if auth:g.ops_auth=auth;return True
+        if staff['has_staff']():return False
         try:
             with storage() as connection:
                 row=connection.execute('SELECT * FROM admin_sessions WHERE token_hash=? AND expires>?',(digest,time.time())).fetchone()
@@ -207,12 +215,60 @@ def register_admin(app):
         expected=g.ops_auth['csrf'] if 'ops_auth' in g else session.get('ops_csrf')
         return bool(expected) and hmac.compare_digest(str(token),expected)
 
+    def audit_setting():
+        auth=getattr(g,'ops_auth',{})
+        if auth.get('staff_id') and app.extensions.get('solace_safety'):
+            app.extensions['solace_safety']['audit']({'id':auth['staff_id'],'username':auth['username']},'operations_setting',request.path,g.ops_change_reason,'success',False)
+
+    @app.route(BASE+'/settings',methods=['GET','POST'])
+    def public_launch_settings():
+        if not authorized():abort(401)
+        launch=app.extensions['solace_launch'];launch['initialize']()
+        if request.method=='POST':
+            if not csrf_valid():abort(403)
+            data=request.get_json(silent=True) or {}
+            if type(data.get('love_enabled')) is not bool:return jsonify(error='Choose on or off.'),400
+            path=Path(app.config.get('SOLACE_LOVE_VIDEO') or os.environ.get('SOLACE_LOVE_VIDEO',''))
+            if data['love_enabled'] and (not path.is_absolute() or not path.is_file() or path.resolve().is_relative_to(Path(app.static_folder).resolve())):return jsonify(error='Configure SOLACE_LOVE_VIDEO with a licensed MP4 outside static/ before enabling this gesture.'),409
+            from app import db
+            db().execute("UPDATE launch_settings SET value=? WHERE key='love_enabled'",('1' if data['love_enabled'] else '0',));audit_setting();db().commit()
+        return jsonify(love_enabled=launch['setting']('love_enabled')=='1')
+
+    @app.route(BASE+'/storage',methods=['GET','POST'])
+    def operations_user_storage():
+        if not authorized():abort(401)
+        from app import db
+        quota=app.extensions['solace_user_storage']
+        data=request.get_json(silent=True) or {}
+        try:page=int(data.get('page',request.args.get('page',0)))
+        except (ValueError,TypeError):return jsonify(error='Invalid page.'),400
+        if not 0<=page<=100000:return jsonify(error='Invalid page.'),400
+        if request.method=='POST':
+            if not csrf_valid():abort(403)
+            value=data.get('limit_mib');target=data.get('user')
+            if value is not None and (type(value) is not int or not 1<=value<=1024):return jsonify(error='Choose 1–1024 MiB.'),400
+            if target is None:
+                if value is None:return jsonify(error='Set a default limit.'),400
+                db().execute("UPDATE launch_settings SET value=? WHERE key='user_storage_bytes'",(str(value*1024*1024),))
+            else:
+                match=next((row for row in quota['owners'](page)[:50] if quota['token'](row['identity'])==target),None)
+                if not match:return jsonify(error='User list changed. Refresh this page.'),409
+                if value is None:db().execute('DELETE FROM user_quotas WHERE owner=?',(match['identity'],))
+                else:db().execute('INSERT INTO user_quotas VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET bytes=excluded.bytes',(match['identity'],value*1024*1024))
+            audit_setting();db().commit()
+        rows=quota['owners'](page)
+        users=[]
+        for row in rows[:50]:
+            users.append(dict(user=quota['token'](row['identity']),name=row['name'],registered=bool(row['registered']),override=bool(db().execute('SELECT 1 FROM user_quotas WHERE owner=?',(row['identity'],)).fetchone()),**quota['snapshot'](row['identity'])))
+        return jsonify(default_mib=int(app.extensions['solace_launch']['setting']('user_storage_bytes'))//1048576,page=page,more=len(rows)>50,users=users)
+
     @app.route(BASE,methods=['GET','POST'])
     def operations_home():
         value=configured();error=None
         if authorized():return render_template('admin.html',csrf=g.ops_auth['csrf'])
         if request.method=='POST':
             if not csrf_valid():abort(403)
+            if app.extensions['solace_staff']['has_staff']():return app.extensions['solace_staff']['login']()
             now=time.time();ip=client_ip()
             with storage(timeout=2) as connection:
                 connection.execute('BEGIN IMMEDIATE')
@@ -224,7 +280,7 @@ def register_admin(app):
                     connection.execute('INSERT INTO events(visitor,name,ip,event,room,created) VALUES(?,?,?,?,?,?)',(visitor(),'Administrator',ip,'admin_login',None,now))
                     token=secrets.token_urlsafe(32);csrf=secrets.token_urlsafe(32);version=hashlib.sha256(value.encode()).hexdigest()
                     connection.execute('DELETE FROM admin_sessions WHERE expires<?',(now,))
-                    connection.execute('INSERT INTO admin_sessions VALUES(?,?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),now+1800,version,csrf))
+                    connection.execute('INSERT INTO admin_sessions(token_hash,expires,version,csrf) VALUES(?,?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),now+1800,version,csrf))
                     session.update(ops_version=version,ops_issued=now,ops_csrf=csrf)
                     response=redirect(BASE,code=303)
                     response.set_cookie('solace_ops',token,max_age=1800,httponly=True,secure=request.is_secure,samesite='Strict',path=BASE)
@@ -234,7 +290,7 @@ def register_admin(app):
                 connection.execute('INSERT INTO login_attempts VALUES(?,?,?) ON CONFLICT(ip) DO UPDATE SET attempts=excluded.attempts,until=excluded.until',(ip,count,until))
                 error='Password not accepted.'
         session['ops_csrf']=session.get('ops_csrf') or secrets.token_urlsafe(32)
-        return render_template('admin-login.html',csrf=session['ops_csrf'],error=error),401 if error else 200
+        return render_template('admin-login.html',csrf=session['ops_csrf'],error=error,named_staff=app.extensions['solace_staff']['has_staff']()),401 if error else 200
 
     @app.post(BASE+'/logout')
     def operations_logout():
@@ -249,6 +305,8 @@ def register_admin(app):
     def operations_data():
         if not authorized():abort(401)
         now=time.time()
+        try:disk_free_bytes=shutil.disk_usage(app.instance_path).free;database_bytes=sum(path.stat().st_size for path in Path(app.instance_path).glob('*.db*') if path.is_file())
+        except OSError:disk_free_bytes=database_bytes=None
         with storage() as connection:
             purge(connection,now);flush(connection,force=True)
             visitors=[dict(r) for r in connection.execute('SELECT * FROM visitors WHERE last>=? ORDER BY last DESC LIMIT 300',(now-RETENTION_DAYS*86400,))]
@@ -259,6 +317,8 @@ def register_admin(app):
             diagnostics=[dict(r) for r in connection.execute('SELECT d.*,COALESCE(v.name,\'Guest\') AS name,v.ip,v.agent FROM client_diagnostics d LEFT JOIN visitors v ON v.id=d.visitor WHERE d.received>=? ORDER BY d.received DESC LIMIT 300',(now-RETENTION_DAYS*86400,))]
             diagnostic_history=[dict(r) for r in connection.execute('SELECT e.*,COALESCE(v.name,\'Guest\') AS name FROM diagnostic_events e LEFT JOIN visitors v ON v.id=e.visitor WHERE e.created>=? ORDER BY e.id DESC LIMIT 200',(now-RETENTION_DAYS*86400,))]
             for item in diagnostics+diagnostic_history:item['details']=json.loads(item['details'])
+        if g.ops_auth.get('staff_id'):
+            visitors=[];events=[];matches=[];diagnostics=[];diagnostic_history=[]
         check=time.perf_counter();rooms=members=0;status='online'
         try:
             with closing(sqlite3.connect(Path(app.instance_path)/'afterglow.db',timeout=.15)) as connection:
@@ -267,7 +327,7 @@ def register_admin(app):
         except sqlite3.Error:status='database_unavailable'
         load=list(os.getloadavg()) if hasattr(os,'getloadavg') else None
         uptime=max(.001,time.monotonic()-started)
-        return jsonify(client_diagnostics=diagnostics,diagnostic_history=diagnostic_history,reliability=app.extensions.get('solace_reliability',lambda:[])(),status=status,db_check_ms=round((time.perf_counter()-check)*1000,2),rooms=rooms,active_members=members,visitors=visitors,events=events,ip_matches=matches,chat_backup_count=backups,traffic=traffic,host_load_averages=load,worker_uptime_seconds=round(uptime),worker_cpu_average_percent=round((time.process_time()-cpu_started)/uptime*100,2),retention_days=RETENTION_DAYS,ip_source='Trusted X-Real-IP' if app.config.get('OPS_TRUST_X_REAL_IP') or os.environ.get('SOLACE_TRUST_X_REAL_IP')=='1' else 'WSGI remote address',now=now)
+        return jsonify(disk_free_bytes=disk_free_bytes,database_bytes=database_bytes,client_diagnostics=diagnostics,diagnostic_history=diagnostic_history,reliability=app.extensions.get('solace_reliability',lambda:[])(),status=status,db_check_ms=round((time.perf_counter()-check)*1000,2),rooms=rooms,active_members=members,visitors=visitors,events=events,ip_matches=matches,chat_backup_count=backups,traffic=traffic,host_load_averages=load,worker_uptime_seconds=round(uptime),worker_cpu_average_percent=round((time.process_time()-cpu_started)/uptime*100,2),retention_days=RETENTION_DAYS,ip_source='Trusted X-Real-IP' if app.config.get('OPS_TRUST_X_REAL_IP') or os.environ.get('SOLACE_TRUST_X_REAL_IP')=='1' else 'WSGI remote address',now=now)
 
     @app.get(BASE+'/chat-backup.json')
     def operations_backup():
@@ -283,3 +343,7 @@ def register_admin(app):
                     yield ('' if first else ',')+json.dumps(message,ensure_ascii=False);first=False
                 yield ']}'
         return Response(content(),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="solace-chat-backup.json"'})
+
+    app.extensions["solace_ops"].update(storage=storage,authorized=authorized,csrf_valid=csrf_valid,configured=configured)
+    from staff_auth import register_staff
+    register_staff(app,app.extensions["solace_ops"])

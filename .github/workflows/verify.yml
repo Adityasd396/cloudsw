@@ -1,0 +1,38 @@
+name: Verify launch
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.lock
+      - run: python -B -m unittest discover -s tests -p 'test_*.py'
+      - run: python -B tests/run_local_smoke.py
+      - run: docker build -t solace-local-check .
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.13.0'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - name: Check browser script syntax
+        run: node -e "const f=require('fs'),c=require('child_process');for(const n of f.readdirSync('../static').filter(n=>n.endsWith('.js')))c.execFileSync(process.execPath,['--check','../static/'+n],{stdio:'inherit'})"
+      - run: npx expo export --platform all --output-dir .export-ci
+      # Deliberate security gate: currently reports unpatched build-tool picomatch advisory.
+      - run: npm audit --audit-level=high

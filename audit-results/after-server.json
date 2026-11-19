@@ -1,0 +1,120 @@
+{
+  "local_only": true,
+  "media": "synthetic H264/AAC 640x360 18 seconds",
+  "media_bytes": 1914020,
+  "source_fingerprint": "b7f23d20149bb8efb73453ffffe5205c6c65e70b72dae9bdf42770c2a7caa1f6",
+  "stages": [
+    {
+      "concurrency": 1,
+      "seconds": 1.09,
+      "errors": 0,
+      "requests": 96,
+      "payload_mib": 58.441,
+      "payload_mib_per_second": 53.639,
+      "latency_ms": {
+        "media": {
+          "n": 32,
+          "p50": 11.661,
+          "p95": 44.903,
+          "max": 47.014
+        },
+        "room": {
+          "n": 32,
+          "p50": 7.0,
+          "p95": 8.85,
+          "max": 16.179
+        },
+        "game": {
+          "n": 32,
+          "p50": 5.47,
+          "p95": 7.744,
+          "max": 10.082
+        }
+      }
+    },
+    {
+      "concurrency": 2,
+      "seconds": 0.626,
+      "errors": 0,
+      "requests": 192,
+      "payload_mib": 116.883,
+      "payload_mib_per_second": 186.742,
+      "latency_ms": {
+        "media": {
+          "n": 64,
+          "p50": 6.898,
+          "p95": 9.786,
+          "max": 26.143
+        },
+        "room": {
+          "n": 64,
+          "p50": 4.774,
+          "p95": 5.936,
+          "max": 23.282
+        },
+        "game": {
+          "n": 64,
+          "p50": 3.714,
+          "p95": 4.672,
+          "max": 5.569
+        }
+      }
+    },
+    {
+      "concurrency": 4,
+      "seconds": 1.589,
+      "errors": 0,
+      "requests": 384,
+      "payload_mib": 233.766,
+      "payload_mib_per_second": 147.115,
+      "latency_ms": {
+        "media": {
+          "n": 128,
+          "p50": 18.367,
+          "p95": 25.501,
+          "max": 35.147
+        },
+        "room": {
+          "n": 128,
+          "p50": 12.323,
+          "p95": 36.094,
+          "max": 63.69
+        },
+        "game": {
+          "n": 128,
+          "p50": 8.625,
+          "p95": 15.969,
+          "max": 34.961
+        }
+      }
+    }
+  ],
+  "resources": {
+    "server_cpu_seconds": 3.203,
+    "host_disk_io_bytes_delta": {
+      "read": 32768,
+      "write": 12891136
+    },
+    "cpu_core_percent": {
+      "n": 30,
+      "p50": 77.6,
+      "p95": 187.1,
+      "max": 227.5
+    },
+    "rss_mib": {
+      "n": 30,
+      "p50": 46.801,
+      "p95": 47.383,
+      "max": 47.445
+    },
+    "process_io_bytes_delta": {
+      "read": 483496304,
+      "write": 2120036
+    },
+    "host_network_bytes_delta": {
+      "received": 14052,
+      "sent": 31298
+    },
+    "notes": "CPU is percent of one logical core. Process I/O includes network on Windows. Host NIC counters include unrelated activity and may exclude loopback; payload bytes are separately measured."
+  }
+}

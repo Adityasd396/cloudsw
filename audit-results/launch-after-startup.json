@@ -1,0 +1,17 @@
+{
+  "source": "workspace",
+  "startup_ms": {
+    "n": 5,
+    "p50": 1184.376,
+    "p95": null,
+    "max": 1196.827
+  },
+  "samples_ms": [
+    1163.8734000152908,
+    1196.826900006272,
+    1173.6145000322722,
+    1184.3756000162102,
+    1184.6920999814756
+  ],
+  "definition": "Process creation through application import, disposable schema initialization and first successful HTTP response; not PythonAnywhere cold-start timing."
+}

@@ -1,0 +1,15 @@
+{
+  "full_metadata": {
+    "samples": 25,
+    "p50_ms": 4.635,
+    "p95_ms": 6.575,
+    "response_bytes": 1110
+  },
+  "unchanged_revision": {
+    "samples": 25,
+    "p50_ms": 4.349,
+    "p95_ms": 4.804,
+    "response_bytes": 851
+  },
+  "limits": "Sequential loopback checks with one synthetic picture; not a capacity or WAN benchmark."
+}

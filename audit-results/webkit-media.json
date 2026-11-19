@@ -1,0 +1,9 @@
+{
+  "engine": "WebKit",
+  "source": "real localhost HTTP Range fixture, no app player adapter or route interception",
+  "error": 0,
+  "ready": 4,
+  "time": 2.4317295,
+  "paused": false,
+  "canPlay": "probably"
+}

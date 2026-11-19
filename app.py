@@ -8,16 +8,17 @@ import html
 import math
 import threading
 import hashlib
+import tempfile
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from pathlib import Path
 from datetime import timedelta
 from urllib.parse import urlparse, parse_qs, urlencode
-from flask import Flask, g, jsonify, render_template, request, session
+from flask import Flask, g, jsonify, redirect, render_template, request, session
 from flask.sessions import SecureCookieSessionInterface
 
-app = Flask(__name__)
-Path(app.instance_path).mkdir(exist_ok=True)
+app = Flask(__name__,instance_path=os.environ.get('SOLACE_INSTANCE_PATH') or None)
+Path(app.instance_path).mkdir(exist_ok=True,mode=0o700)
 key_file = Path(app.instance_path) / 'secret'
 configured_secret=os.environ.get('SECRET_KEY')
 if configured_secret:
@@ -115,9 +116,17 @@ def configure_youtube():
     except YouTubeError as error:
         return jsonify(error=str(error), code=error.code), 400
     key_path = Path(app.instance_path) / 'youtube.key'
-    temporary = key_path.with_suffix('.tmp')
-    temporary.write_text(key)
-    temporary.replace(key_path)
+    temporary=None
+    db().execute('BEGIN IMMEDIATE')
+    try:
+        if youtube_key():db().rollback();return jsonify(error='YouTube is already configured.'),409
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=app.instance_path,prefix='.youtube-',delete=False) as output:
+            temporary=Path(output.name);output.write(key);output.flush();os.fsync(output.fileno())
+        temporary.replace(key_path);key_path.chmod(0o600);db().commit()
+    except OSError:
+        db().rollback();return jsonify(error='The server could not save the key. Check instance directory permissions.'),503
+    finally:
+        if temporary is not None:temporary.unlink(missing_ok=True)
     # A newly validated key takes effect in this process immediately.
     os.environ['YOUTUBE_API_KEY'] = key
     search_cache.clear()
@@ -177,6 +186,9 @@ with app.app_context():
     """)
     db().commit()
 
+try:(Path(app.instance_path)/'afterglow.db').chmod(0o600)
+except OSError:pass
+
 @app.before_request
 def identity():
     if 'uid' not in session:
@@ -191,9 +203,24 @@ def identity():
 
 
 def delete_room_records(room_id):
+    if 'solace_messaging' in app.extensions:app.extensions['solace_messaging']['erase_room'](room_id)
     for table in ('messages','queue','typing','presence','room_ads','participant_ads','room_games','mutation_receipts','members'):
         db().execute(f'DELETE FROM {table} WHERE room=?',(room_id,))
     db().execute('DELETE FROM rooms WHERE id=?',(room_id,))
+
+
+def prune_participant_games(room_id,owner):
+    row=db().execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
+    if not row:return
+    games=json.loads(row['state']);changed=False
+    if owner in games.get('players',{}).values():
+        games={**{key:games[key] for key in ('basketball','ludo') if key in games},'board':['']*9,'players':{},'turn':'X','winner':None,'revision':games.get('revision',0)+1};changed=True
+    if owner in games.get('basketball',{}).get('players',{}).values():
+        old=games['basketball'];games['basketball']={'players':{},'scores':{'X':0,'O':0},'turn':'X','winner':None,'revision':old.get('revision',0)+1,'shot':None};changed=True
+    if owner in games.get('ludo',{}).get('players',{}).values():
+        from ludo_game import fresh
+        games['ludo']=fresh(games['ludo'].get('revision',0)+1);changed=True
+    if changed:db().execute('UPDATE room_games SET state=? WHERE room=?',(json.dumps(games),room_id))
 
 
 def cleanup_empty_rooms():
@@ -232,7 +259,11 @@ def video_id(value):
 @app.get('/join')
 @app.get('/create')
 def index():
-    return render_template('index.html')
+    if request.path=='/' and not request.args.get('room'):
+        if app.extensions['solace_social']['person'](session['uid']):return redirect('/home',303)
+        return app.extensions['solace_public_home']()
+    profile=app.extensions['solace_social']['person'](session['uid'])
+    return render_template('index.html',saved_name=profile['name'] if profile else '')
 
 
 def release_info():
@@ -334,7 +365,9 @@ def create_room():
     except ValueError as error:return jsonify(error=str(error)),409
     if saved:
         db().rollback();return jsonify(saved),201
-    name = str(data.get('name', 'Late night lounge')).strip()[:60] or 'Late night lounge'
+    profile=app.extensions['solace_social']['person'](session['uid'])
+    default_name=(profile['name']+"’s room") if profile else 'Our little room'
+    name = str(data.get('name','')).strip()[:60] or default_name
     for _ in range(20):
         room_id = str(secrets.randbelow(900000)+100000)
         try:
@@ -344,6 +377,8 @@ def create_room():
             continue
     else:
         return jsonify(error='Could not create a room right now. Please try again.'),503
+    problem=app.extensions['solace_social']['create_settings'](room_id,data)
+    if problem:db().rollback();return jsonify(error=problem),400
     save_receipt('__create__',token,digest,{'id':room_id})
     db().commit()
     return jsonify(id=room_id), 201
@@ -354,7 +389,8 @@ def room(room_id):
     room = db().execute('SELECT * FROM rooms WHERE id=?', (room_id,)).fetchone()
     if not room:
         return jsonify(error='Room not found. Create a new room or check your invite link.'), 404
-    if request.method=='GET' and not db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone():return jsonify(error='Join the room first.'),403
+    membership=db().execute('SELECT seen FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone() if request.method=='GET' else None
+    if request.method=='GET' and not membership:return jsonify(error='Join the room first.'),403
     now = time.time()
     data = request.get_json(silent=True) or {}
     token=digest=None
@@ -371,6 +407,11 @@ def room(room_id):
         action = data.get('action')
         name = str(data.get('name', 'Guest')).strip()[:24] or 'Guest'
         if action == 'join':
+            problem=app.extensions['solace_social']['join_guard'](room,data)
+            if problem:db().rollback();return jsonify(error=problem[0]),problem[1]
+            profile=app.extensions['solace_social']['person'](session['uid'])
+            if profile and not data.get('name'):name=profile['name']
+            db().execute('INSERT OR IGNORE INTO guest_data(owner,created) VALUES(?,?)',(session['uid'],now))
             db().execute('INSERT INTO members VALUES(?,?,?,?) ON CONFLICT(room,id) DO UPDATE SET name=excluded.name,seen=excluded.seen', (room_id,session['uid'],name,now))
             db().execute('INSERT INTO profiles VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,updated=excluded.updated',(session['uid'],name,now))
             db().execute('INSERT INTO presence VALUES(?,?,1) ON CONFLICT(room,id) DO UPDATE SET active=1',(room_id,session['uid']))
@@ -485,14 +526,18 @@ def room(room_id):
         db().commit()
     elif replayed:
         reliability_record('mutation_replay');db().commit()
-    db().execute('UPDATE members SET seen=? WHERE room=? AND id=? AND seen<?',(now,room_id,session['uid'],now-1))
-    db().commit()
+    # Avoid acquiring SQLite's writer lock for a no-op heartbeat on every poll.
+    if request.method!='GET' or membership['seen']<now-1:
+        db().execute('UPDATE members SET seen=? WHERE room=? AND id=? AND seen<?',(now,room_id,session['uid'],now-1))
+        db().commit()
     if request.method == 'POST' and data.get('action') == 'playback' and data.get('compact'):
         return jsonify(mutation_result)
     db().execute('BEGIN')
     room = dict(db().execute('SELECT * FROM rooms WHERE id=?',(room_id,)).fetchone())
     host_id = room.pop('host')
     room['is_host'] = host_id == session['uid']
+    settings=app.extensions['solace_social']['metadata'](room_id)
+    room['visibility']=settings['visibility'] if settings else 'private'
     room['can_control']=bool(db().execute('SELECT 1 FROM members WHERE room=? AND id=?',(room_id,session['uid'])).fetchone())
     ad=db().execute('SELECT active,updated FROM room_ads WHERE room=?',(room_id,)).fetchone()
     room['host_ad']=bool(ad and ad['active'] and now-ad['updated']<10)
@@ -503,8 +548,11 @@ def room(room_id):
     room['release_version']=CURRENT_RELEASE.get('version','development')
     room['server_time'] = time.time()
     room['storage_generation']=db().execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0]
+    profile_codes={r['owner']:r['code'] for r in db().execute('SELECT owner,code FROM social_profiles WHERE owner IN (SELECT id FROM members WHERE room=? UNION SELECT sender FROM messages WHERE room=?)',(room_id,room_id))}
     room['members']=[dict(x) for x in db().execute('SELECT members.name,members.id,members.seen,COALESCE(presence.active,1) AS presence_active FROM members LEFT JOIN presence ON members.room=presence.room AND members.id=presence.id WHERE members.room=? ORDER BY members.seen DESC LIMIT 100',(room_id,))]
     for member in room['members']:
+        member['profile_code']=profile_codes.get(member['id']) or app.extensions['solace_social']['social_profile'](member['id'])['code']
+        profile_codes[member['id']]=member['profile_code']
         member['you'] = member['id'] == session['uid']
         member['is_host'] = member['id'] == host_id
         # Member IDs are room-scoped opaque values, never session credentials.
@@ -528,6 +576,7 @@ def room(room_id):
     room['messages'] = list(reversed([dict(x) for x in db().execute(query+' ORDER BY m.id DESC LIMIT 100',(room_id,after) if after is not None else (room_id,))]))
     for message in room['messages']:
         sender=message.pop('sender')
+        message['profile_code']=profile_codes.get(sender)
         message['you']=sender==session['uid']
         message['is_host']=sender==host_id
         reply_id=message.pop('reply_id');reply_name=message.pop('reply_name');reply_body=message.pop('reply_body')
@@ -535,6 +584,16 @@ def room(room_id):
         message['sender_id']=hashlib.sha256((room_id+(sender or message['name'])).encode()).hexdigest()[:16]
     room['typing'] = [row['name'] for row in db().execute('SELECT members.name FROM typing JOIN members ON typing.room=members.room AND typing.id=members.id WHERE typing.room=? AND typing.id<>? AND typing.updated>? AND members.seen>?',(room_id,session['uid'],now-4,now-20))]
     room['queue'] = [dict(x) for x in db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,))]
+    room['ludo_roll']=None
+    room['love_enabled']=app.extensions['solace_launch']['setting']('love_enabled')=='1'
+    game_row=db().execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
+    if game_row:
+        ludo=json.loads(game_row['state']).get('ludo',{});roll=ludo.get('last_roll')
+        if roll and now-roll.get('created',0)<8:
+            actor=db().execute('SELECT name FROM members WHERE room=? AND id=?',(room_id,ludo.get('players',{}).get(roll.get('player')))).fetchone()
+            if actor:room['ludo_roll']={'id':roll['id'],'dice':roll['dice'],'created':roll['created'],'name':actor['name']}
+    room['media_revision'],media_items=app.extensions['solace_messaging']['room_items'](room_id)
+    if media_items is not None:room['media_items']=media_items
     return jsonify(room)
 
 @app.post('/api/rooms/<room_id>/telemetry')
@@ -584,8 +643,7 @@ def leave_room(room_id):
         return jsonify(ok=True,room_deleted=False)
     for table in ('members','presence','typing','participant_ads'):
         db().execute(f'DELETE FROM {table} WHERE room=? AND id=?',(room_id,session['uid']))
-    game=db().execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
-    if game and session['uid'] in json.loads(game['state'])['players'].values():db().execute('DELETE FROM room_games WHERE room=?',(room_id,))
+    prune_participant_games(room_id,session['uid'])
     empty=not db().execute('SELECT 1 FROM members WHERE room=? LIMIT 1',(room_id,)).fetchone()
     if empty:delete_room_records(room_id)
     else:
@@ -602,6 +660,11 @@ def reliability_snapshot():
     return [dict(row) for row in rows]
 
 app.extensions['solace_reliability']=reliability_snapshot
+
+from launch import register_launch
+register_launch(app,db)
+from production import register_production
+register_production(app,db)
 
 @app.after_request
 def reliability_response(response):

@@ -1,6 +1,15 @@
 *
 !requirements.txt
+<<<<<<< HEAD
 !app.py
+=======
+!requirements.lock
+!app.py
+!launch.py
+!account_mail.py
+!ludo_game.py
+!game_options.py
+>>>>>>> 010aba3 (initial commit 1)
 !serve.py
 !templates/
 !templates/**
@@ -15,3 +24,20 @@
 !release.json
 !tools/
 !tools/storage.py
+<<<<<<< HEAD
+=======
+
+!user_storage.py
+!production.py
+
+!social.py
+
+!messaging.py
+
+!people.py
+!platform_safety.py
+!staff_auth.py
+!setup_staff.py
+
+!community.py
+>>>>>>> 010aba3 (initial commit 1)

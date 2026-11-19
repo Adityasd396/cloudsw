@@ -1,0 +1,1 @@
+(()=>{const n=document.getElementById('singleMedia');if(n){const media=JSON.parse(n.dataset.media);n.append(SolaceMedia.mediaNode(media,{remove:media.can_remove,onRemove:()=>n.replaceChildren(SolaceMedia.make('p','Attachment removed'))}))}})();

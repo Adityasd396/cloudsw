@@ -7,6 +7,11 @@ test('lost mutation response retries exactly the same request identity and body'
 test('conflicts are returned without replaying a stale playback command',async()=>{
  let calls=0;await assert.rejects(()=>requestJson(async()=>{calls++;return {ok:false,status:409,json:async()=>({error:'Changed',code:'stale_playback'})}},'/room',{data:{action:'playback'}}),error=>error.status===409);assert.equal(calls,1);
 });
+test('page cancellation aborts in-flight requests and never retries a mutation',async()=>{
+ const cancel=new AbortController();let calls=0;
+ const pending=requestJson(async(_,options)=>{calls++;return new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(Object.assign(Error('Aborted'),{name:'AbortError'})),{once:true}))},'/room',{data:{action:'chat',body:'once'},signal:cancel.signal});
+ cancel.abort();await assert.rejects(pending,e=>e.code==='cancelled');assert.equal(calls,1);
+});
 test('polling backs off while retaining responsive playing intervals and browser/native parity',()=>{
  assert.ok(pollDelay({playing:true})<pollDelay({playing:false}));assert.equal(pollDelay({failures:100}),15000);assert.equal(pollDelay({hidden:true}),20000);
  assert.equal(fs.readFileSync(path.join(__dirname,'../transport.cjs'),'utf8'),fs.readFileSync(path.join(__dirname,'../../static/transport.js'),'utf8'));
@@ -16,6 +21,13 @@ test('restored storage can reset an old playback revision without retaining stal
  const {isOlderSnapshot,mergeRoomMessages,pollPath}=require('../session.cjs');
  const before={id:'123456',storage_generation:'old',playback_revision:20,server_time:10,messages:[{id:99,body:'later'}]},next={id:'123456',storage_generation:'new',playback_revision:4,server_time:20,messages_delta:true,messages:[{id:5,body:'restored'}]};
  assert.equal(isOlderSnapshot(before,next),false);assert.equal(isOlderSnapshot(before,{...next,storage_generation:'old'}),true);assert.equal(mergeRoomMessages(before,next).messages.length,1);assert.match(pollPath('123456',99,'old'),/generation=old/);assert.equal(pollPath('123456',null,'old'),'/api/rooms/123456?generation=old');
+});
+test('unchanged attachment metadata survives incremental polls without crossing rooms or restores',()=>{
+ const {mergeRoomMessages,pollPath}=require('../session.cjs'),media=[{id:'photo',message:1}],previous={id:'123456',storage_generation:'one',media_items:media,messages:[{id:1}]};
+ const next=mergeRoomMessages(previous,{id:'123456',storage_generation:'one',media_revision:'20.000000',messages_delta:true,messages:[]});assert.equal(next.media_items,media);
+ assert.equal(mergeRoomMessages(previous,{id:'654321',storage_generation:'one',messages:[]}).media_items,undefined);
+ assert.equal(mergeRoomMessages(previous,{id:'123456',storage_generation:'two',messages:[]}).media_items,undefined);
+ assert.match(pollPath('123456',1,'one','20.000000'),/media_after=20.000000/);
 });
 
 test('recovery telemetry runs once and cannot break playback publication readiness',()=>{

@@ -1,0 +1,12 @@
+[
+  {
+    "platform": "android",
+    "sources": 637,
+    "picomatch_sources": []
+  },
+  {
+    "platform": "ios",
+    "sources": 639,
+    "picomatch_sources": []
+  }
+]

@@ -1,0 +1,1 @@
+let roomDiceKey=null,roomDiceCursor=null;const diceRender=render;render=function(data){diceRender(data);const key=data.id+':'+data.storage_generation,roll=data.ludo_roll;if(roomDiceKey!==key){roomDiceKey=key;roomDiceCursor=roll?.id||null;return}if(roll&&roll.id!==roomDiceCursor){roomDiceCursor=roll.id;if(activeScreen==='watch'&&!loveOverlay)SolaceDiceResult.show(roll)}};

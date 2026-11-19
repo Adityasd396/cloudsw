@@ -8,7 +8,7 @@ class StreamSourcesTests(unittest.TestCase):
     tearDown=test_app.WatchPartyTests.tearDown
 
     def test_join_create_routes_and_direct_source_validation(self):
-        for route in ['/','/join','/create']:self.assertEqual(self.host.get(route).status_code,200)
+        for route in ['/','/join','/create']:self.assertEqual(self.host.get(route,follow_redirects=True).status_code,200)
         for value in ['https://media.example/movie.mp4?token=123','https://media.example/live.m3u8','https://media.example/film.webm']:self.assertEqual(video_id(value),value)
         for value in ['javascript:alert(1)','file:///movie.mp4','http://media.example/movie.mp4','https://user:password@media.example/a.mp4','https://netflix.com/watch/1','https://media.example/page.html']:self.assertIsNone(video_id(value))
 

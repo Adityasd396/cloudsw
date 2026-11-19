@@ -18,7 +18,7 @@ class StartupSmokeTests(unittest.TestCase):
         target=Path(temporary.name).resolve()
         self.assertEqual(target.parent,ROOT.resolve())
         try:
-            for name in ('app.py','room_game.py','admin_panel.py','ludo_game.py','game_options.py'):shutil.copy2(ROOT/name,target/name)
+            for name in ('app.py','launch.py','social.py','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','setup_staff.py','account_mail.py','user_storage.py','production.py','room_game.py','admin_panel.py','ludo_game.py','game_options.py'):shutil.copy2(ROOT/name,target/name)
             shutil.copytree(ROOT/'templates',target/'templates')
             if legacy:
                 (target/'instance').mkdir()
@@ -69,7 +69,7 @@ print('Fresh schema and preserved legacy data checks passed.')
         from concurrent.futures import ThreadPoolExecutor
         with tempfile.TemporaryDirectory(prefix='.smoke-concurrent-',dir=ROOT) as temporary:
             target=Path(temporary).resolve();self.assertEqual(target.parent,ROOT.resolve())
-            for name in ('app.py','room_game.py','admin_panel.py','ludo_game.py','game_options.py'):shutil.copy2(ROOT/name,target/name)
+            for name in ('app.py','launch.py','social.py','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','setup_staff.py','account_mail.py','user_storage.py','production.py','room_game.py','admin_panel.py','ludo_game.py','game_options.py'):shutil.copy2(ROOT/name,target/name)
             script="import hashlib;from app import app,db;print(hashlib.sha256(app.secret_key.encode()).hexdigest());assert len(app.secret_key)==64"
             environment=os.environ.copy();environment.pop('SECRET_KEY',None);environment.pop('SOLACE_ADMIN_PASSWORD_HASH',None)
             def start(_):return subprocess.run([sys.executable,'-B','-c',script],cwd=target,env=environment,text=True,capture_output=True,timeout=30)

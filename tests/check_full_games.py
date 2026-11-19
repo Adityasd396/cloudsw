@@ -31,11 +31,11 @@ with sync_playwright() as p:
   current=a if a.evaluate('game.turn')=='red' else b;old=current.evaluate('game.revision');current.locator('#roll').click();current.wait_for_function('(old)=>game.revision>old',arg=old)
   state=current.evaluate('game');other=b if current==a else a;other.wait_for_function('(rev)=>game.revision>=rev',arg=state['revision'])
   if state['dice']==6:
-   current.locator('.pawn.legal').first.click();current.locator('.confirm-move').click();current.wait_for_function('(rev)=>game.revision>rev',arg=state['revision']);break
+   current.locator('.pawn.legal').first.click();current.wait_for_function('(rev)=>game.revision>rev',arg=state['revision']);break
  else:raise AssertionError('No six in 64 server rolls')
  revision=current.evaluate('game.revision');other.wait_for_function('(rev)=>game.revision>=rev',arg=revision)
  assert a.evaluate('JSON.stringify(game.pawns)')==b.evaluate('JSON.stringify(game.pawns)')
- assert len(a.locator('.pawn').all())==8;assert a.evaluate('document.documentElement.scrollWidth<=innerWidth')
+ assert len(a.locator('.pawn:visible').all())==8;assert a.evaluate('document.documentElement.scrollWidth<=innerWidth')
  a.screenshot(path=str(ROOT/'solace-little-ludo.png'));a.set_viewport_size({'width':844,'height':390});a.wait_for_timeout(200);assert a.evaluate('document.documentElement.scrollWidth<=innerWidth')
  assert not errors,errors
  for context in contexts:context.request.post(url+'/leave',data={})

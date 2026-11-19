@@ -1,0 +1,48 @@
+"""Disposable Home/Profile, single-owner auth navigation and active-room regressions."""
+import io,json,os,uuid
+from pathlib import Path
+from PIL import Image
+from playwright.sync_api import sync_playwright,expect
+from media_https_fixture import MediaFixture
+
+ROOT=Path(__file__).resolve().parents[1]
+BASE=os.environ.get('SOLACE_TEST_BASE','http://127.0.0.1:8050')
+OUT=Path(os.environ.get('SOLACE_SCREENSHOT_DIR',str(ROOT/'audit-results')));OUT.mkdir(parents=True,exist_ok=True)
+STUB="""()=>{window.media={at:performance.now(),position:0,playing:true};const pos=()=>media.position+(media.playing?(performance.now()-media.at)/1000:0),set=(p,v)=>{media.position=p;media.playing=v;media.at=performance.now()};player={getCurrentTime:pos,getPlayerState:()=>media.playing?1:2,getDuration:()=>3600,getVideoData:()=>({video_id:state.video,title:'Synthetic stream'}),seekTo:p=>set(p,media.playing),playVideo:()=>set(pos(),true),pauseVideo:()=>set(pos(),false),loadVideoById:v=>set(v.startSeconds||0,true),cueVideoById:v=>set(v.startSeconds||0,false),isMuted:()=>false,mute(){},unMute(){}};ready=true;playerNotice.hidden=true;pageRecovery.reset();synchronize(true)}"""
+results=[]
+with MediaFixture((ROOT/'.openai/stream-audit/media/soak.mp4').read_bytes()) as fixture,sync_playwright() as p:
+ for engine in ['chromium','webkit']:
+  browser=getattr(p,engine).launch(args=['--autoplay-policy=no-user-gesture-required'] if engine=='chromium' else [])
+  context=browser.new_context(viewport=dict(width=390,height=844),has_touch=True,ignore_https_errors=True);peer=browser.new_context(ignore_https_errors=True)
+  context.add_init_script("localStorage.setItem('solace-rotation','false');Object.defineProperty(document,'hidden',{get:()=>false})")
+  page=context.new_page();errors=[];diagnostics=[];requests=[]
+  page.route('https://www.youtube.com/**',lambda r:r.abort())
+  page.on('pageerror',lambda e:(diagnostics if str(e).startswith('/127.0.0.1:') and 'due to access control checks.' in str(e) else errors).append(str(e)))
+  page.on('request',lambda r:requests.append((r.method,r.url.split(BASE)[-1])))
+  def post(ctx,path,data):
+   token=ctx.request.get(BASE+'/api/me').json()['csrf'];r=ctx.request.post(BASE+path,data=data,headers={'X-CSRF-Token':token});assert r.ok,(path,r.status,r.text());return r.json()
+  page.goto(BASE+'/home');page.wait_for_url('**/welcome');page.locator('#guestChoice').click();page.locator('#guestForm input').fill('Peach');page.locator('#guestForm button').click();page.wait_for_url('**/home');expect(page.locator('.home-greeting')).to_contain_text('Peach')
+  for path,required,forbidden in [('/home','#homeStats',['/api/me/connections']),('/friends','#homeFriends',['/api/me/dashboard','/api/public/rooms','/api/me/invitations']),('/rooms','#homeRooms',['/api/me/dashboard','/api/me/connections'])]:
+   requests.clear();page.goto(BASE+path);page.locator(required).wait_for();page.wait_for_timeout(500);assert not [r for r in requests if r[0]=='GET' and r[1] in forbidden],requests
+   if path=='/friends':assert page.get_by_role('link',name='Privacy settings',exact=True).get_attribute('href')=='/settings#privacy'
+  for width,height in [(390,844),(844,390),(1280,800)]:
+   page.set_viewport_size(dict(width=width,height=height));page.goto(BASE+'/home');expect(page.locator('.home-greeting')).to_contain_text('Peach');profile_links=page.locator('a[href="/account"]');assert sum(profile_links.nth(i).is_visible() for i in range(profile_links.count()))==1
+   expect(page.locator('.home-shortcuts')).to_be_visible() if width<=650 else expect(page.locator('.home-shortcuts')).to_be_hidden()
+   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1');page.screenshot(path=str(OUT/f'home-clean-{engine}-{width}.png'))
+  page.set_viewport_size(dict(width=390,height=844));page.goto(BASE+'/account');expect(page.locator('#removePicture')).to_be_hidden();expect(page.locator('#pictureForm button')).to_be_disabled();assert not page.locator('#verifyEmail').count();assert not page.locator('#signout').count();assert not page.locator('a[href="/account"]').count();assert 'Back to watching' not in page.locator('body').inner_text()
+  page.locator('#profileForm input').fill('Peach Moon');page.locator('#profileForm button').click();expect(page.locator('#formStatus')).to_have_text('Name saved.')
+  picture=io.BytesIO();Image.new('RGB',(40,40),'pink').save(picture,'PNG');requests.clear();page.locator('#pictureForm input').set_input_files(dict(name='avatar.png',mimeType='image/png',buffer=picture.getvalue()));page.locator('#pictureForm button').click();expect(page.locator('#formStatus')).to_have_text('Picture updated.');expect(page.locator('#removePicture')).to_be_visible();expect(page.locator('#pictureForm button')).to_be_disabled();assert requests.count(('POST','/api/me/avatar'))==1
+  page.locator('#removePicture').click();expect(page.locator('#formStatus')).to_have_text('Picture removed.');expect(page.locator('#removePicture')).to_be_hidden();page.evaluate('scrollTo(0,0)');page.screenshot(path=str(OUT/f'profile-clean-{engine}.png'))
+  page.goto(BASE+'/home');expect(page.locator('.home-greeting')).to_contain_text('Peach Moon');page.locator('.home-primary a[href="/create"]').click();page.locator('#setupSubmit').click();page.locator('body.room-connected').wait_for();page.evaluate("showScreen('watch')");room=page.evaluate('roomId');post(peer,'/api/me/profile',dict(name='Moon'));post(peer,'/api/rooms/'+room,dict(action='join',name='Moon'))
+  if engine=='chromium':page.evaluate('url=>action({action:"watch",url})',fixture.url);page.wait_for_function('directElement&&directElement.currentTime>.2')
+  else:page.evaluate("action({action:'watch',url:'aqz-KE-bpKQ'})");page.evaluate(STUB)
+  page.evaluate('window.keptPlayer=player;window.keptStage=videoStage;window.identityEvents=[];addEventListener("message",e=>{if(e.origin===location.origin&&["solace-identity-changed","solace-identity-upgraded"].includes(e.data?.type))identityEvents.push(e.data.type)})');before=context.request.get(BASE+'/api/rooms/'+room).json()['command_revision'];started=page.evaluate('player.getCurrentTime()')
+  page.evaluate("SolaceRoomNavigation.open('/account')");frame=page.frame_locator('.room-private-screen iframe');frame.locator('#profileForm').wait_for();expect(frame.locator('.return-room')).to_be_hidden();expect(page.get_by_role('button',name='Return to room',exact=True)).to_be_visible();assert 'Back to watching' not in frame.locator('body').inner_text()
+  for width,height in [(1280,800),(844,390),(390,844)]:
+   page.set_viewport_size(dict(width=width,height=height));expect(page.locator('.surface-tabs')).to_be_hidden() if width>=1100 else expect(page.locator('.surface-tabs')).to_be_visible();assert page.evaluate('player===keptPlayer&&videoStage===keptStage')
+  frame.get_by_role('link',name='Create an account',exact=True).click();frame.locator('#authForm').wait_for();email='nav-'+uuid.uuid4().hex+'@example.test';password='Synthetic-Navigation-Password-2026!';frame.locator('[name=email]').fill(email);frame.locator('[name=password]').fill(password);frame.locator('[name=accept_terms]').check();frame.locator('#authForm button').click();expect(frame.locator('.home-greeting')).to_contain_text('Peach Moon',timeout=15000);assert page.evaluate('identityEvents')==['solace-identity-upgraded'];assert page.evaluate('player===keptPlayer&&videoStage===keptStage');assert page.evaluate('player.getCurrentTime()')>started;upgraded_room=context.request.get(BASE+'/api/rooms/'+room);assert upgraded_room.ok,(upgraded_room.status,upgraded_room.text());assert upgraded_room.json()['command_revision']==before
+  page.evaluate("SolaceRoomNavigation.open('/account')");frame.locator('#signout').wait_for();expect(frame.locator('#verifyEmail')).to_be_visible();requests.clear();frame.locator('#signout').click();page.get_by_role('dialog',name='Change your room?').get_by_role('button',name='Stay here',exact=True).click();assert not [r for r in requests if r==('POST','/api/auth/signout')];assert page.evaluate('roomId')==room
+  transitions=[];page.on('framenavigated',lambda f:transitions.append(f.url) if f==page.main_frame else None);frame.locator('#signout').click();page.get_by_role('dialog',name='Change your room?').get_by_role('button',name='Continue',exact=True).click();page.wait_for_url('**/signin');assert len([u for u in transitions if u.split('?')[0]==BASE+'/signin'])==1;assert requests.count(('POST','/api/auth/signout'))==1;old=peer.request.get(BASE+'/api/rooms/'+room).json();assert old['is_host'] and len(old['participants'])==1
+  page.locator('[name=email]').fill(email);page.locator('[name=password]').fill(password);page.locator('#authForm button').click();page.wait_for_url('**/home');expect(page.locator('.home-greeting')).to_contain_text('Peach Moon');page.reload();expect(page.locator('.home-greeting')).to_contain_text('Peach Moon');assert not page.locator('#guestChoice').count();page.goto(BASE+'/account');expect(page.locator('#signout')).to_be_visible();assert not errors,errors
+  post(peer,'/api/rooms/'+room+'/leave',{});browser.close();results.append(dict(engine=engine,passed=True,guest_and_account_home_profile=True,screen_scoped_requests=True,one_visible_profile_and_room_return=True,contextual_picture_actions=True,guest_upgrade_keeps_player=True,single_auth_navigation=True,signout_cancel_and_host_transfer=True,portrait_landscape_desktop=True,physical_phones=False,media='decoded synthetic HTTPS video' if engine=='chromium' else 'simulated player',navigation_unload_diagnostics=len(diagnostics)))
+print(json.dumps(results));(OUT/'navigation-browser-results.json').write_text(json.dumps(results,indent=2)+'\n',encoding='utf-8')

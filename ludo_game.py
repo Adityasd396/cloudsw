@@ -42,7 +42,7 @@ def next_turn(game):
 def register_ludo(app,db):
     @app.route('/api/rooms/<room_id>/ludo',methods=['GET','POST'])
     def room_ludo(room_id):
-        connection=db();connection.execute('BEGIN IMMEDIATE')
+        connection=db();connection.execute('BEGIN IMMEDIATE' if request.method=='POST' else 'BEGIN')
         if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():return jsonify(error='Room not found.'),404
         members={r['id']:r['name'] for r in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
         if session['uid'] not in members:return jsonify(error='Join the room first.'),403
@@ -58,13 +58,24 @@ def register_ludo(app,db):
             if action=='join':
                 if not you:
                     if game['started']:return jsonify(error='A round is in progress. You can watch.'),409
-                    you=next((c for c in COLORS if c not in game['players']),None)
+                    preferred=data.get('color')
+                    if preferred is not None and preferred not in COLORS:return jsonify(error='Choose a Ludo color.'),400
+                    if preferred in game['players']:return jsonify(error='That color is already taken.'),409
+                    you=preferred or next((c for c in COLORS if c not in game['players']),None)
                     if not you:return jsonify(error='Four players have joined.'),409
                     game['players'][you]=session['uid'];game['revision']+=1
             else:
                 if not you:return jsonify(error='Join the game first.'),403
                 if type(data.get('revision')) is not int or data['revision']!=game['revision']:return jsonify(error='Game updated. Your board will refresh.'),409
-                if action=='configure':
+                if action=='color':
+                    color=data.get('color')
+                    if game['started']:return jsonify(error='Colors lock when the match starts.'),409
+                    if color not in COLORS:return jsonify(error='Choose a Ludo color.'),400
+                    if color in game['players'] and color!=you:return jsonify(error='That color is already taken.'),409
+                    if color!=you:
+                        uid=game['players'].pop(you);game['players'][color]=uid;game['pawns'][color]=list(game['pawns'][you]);game['pawns'][you]=[-1]*(game['pawn_count'])+[FINISH]*(4-game['pawn_count']);you=color
+                        game.pop('proposal',None)
+                elif action=='configure':
                     values=data.get('values',{})
                     if game['started'] and not game['winner']:return jsonify(error='Finish this match first.'),409
                     if not isinstance(values,dict) or set(values)!={'pawn_count'} or type(values['pawn_count']) is not int or values['pawn_count'] not in (2,4):return jsonify(error='Invalid match length.'),400
@@ -94,7 +105,7 @@ def register_ludo(app,db):
                     if action=='roll':
                         if game['dice'] is not None:return jsonify(error='Choose a highlighted pawn.'),409
                         dice=secrets.randbelow(6)+1;game['dice']=dice;game['sixes']=game['sixes']+1 if dice==6 else 0
-                        game['event']={'kind':'roll','player':you,'dice':dice,'created':time.time()}
+                        game['event']={'id':secrets.token_hex(8),'kind':'roll','player':you,'dice':dice,'created':time.time()};game['last_roll']=dict(game['event'])
                         if game['sixes']==3:
                             game['event']['kind']='three_sixes';game['dice']=None;next_turn(game)
                         elif not legal(game,you,dice):
@@ -109,7 +120,7 @@ def register_ludo(app,db):
                                 if other==you:continue
                                 for i,p in enumerate(game['pawns'][other]):
                                     if square(other,p)==cell:game['pawns'][other][i]=-1;captured.append([other,i])
-                        game['event']={'kind':'move','player':you,'token':token,'from':old,'to':target,'captured':captured,'created':time.time()}
+                        game['event']={'id':secrets.token_hex(8),'kind':'move','player':you,'token':token,'from':old,'to':target,'captured':captured,'created':time.time()}
                         game['dice']=None
                         if all(p==FINISH for p in game['pawns'][you]):game['winner']=you
                         elif dice!=6 and not captured and target!=FINISH:next_turn(game)
@@ -117,4 +128,4 @@ def register_ludo(app,db):
                 if action not in ('preview','cheer'):game['revision']+=1
             state['ludo']=game;connection.execute('INSERT INTO room_games VALUES(?,?) ON CONFLICT(room) DO UPDATE SET state=excluded.state',(room_id,json.dumps(state)))
         connection.commit()
-        return jsonify(**{k:v for k,v in game.items() if k!='players'},players={c:members[uid] for c,uid in game['players'].items()},you=you,legal=legal(game,you,game['dice']) if you==game['turn'] and game['dice'] is not None else [],storage_generation=connection.execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0])
+        return jsonify(server_time=time.time(),**{k:v for k,v in game.items() if k not in ('players','server_time')},players={c:members[uid] for c,uid in game['players'].items()},you=you,legal=legal(game,you,game['dice']) if you==game['turn'] and game['dice'] is not None else [],storage_generation=connection.execute("SELECT value FROM app_metadata WHERE key='generation'").fetchone()[0])

@@ -1,0 +1,6 @@
+# Optional local audit environment only; not production requirements.
+requests>=2.32,<3
+psutil>=5.9,<8
+playwright>=1.48,<2
+packaging>=24,<27
+cryptography>=50,<51

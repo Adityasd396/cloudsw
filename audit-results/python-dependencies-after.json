@@ -1,0 +1,30 @@
+{
+  "packages": {
+    "tzdata": "2025.2",
+    "pillow": "13.0.0",
+    "waitress": "3.0.2",
+    "Flask": "3.1.3",
+    "Werkzeug": "3.1.9",
+    "MarkupSafe": "3.0.3",
+    "Jinja2": "3.1.6",
+    "itsdangerous": "2.2.0",
+    "click": "8.3.0",
+    "colorama": "0.4.6",
+    "blinker": "1.9.0"
+  },
+  "service": "https://api.osv.dev/v1/querybatch",
+  "scope": "installed production dependency closure only",
+  "results": {
+    "tzdata": [],
+    "pillow": [],
+    "waitress": [],
+    "Flask": [],
+    "Werkzeug": [],
+    "MarkupSafe": [],
+    "Jinja2": [],
+    "itsdangerous": [],
+    "click": [],
+    "colorama": [],
+    "blinker": []
+  }
+}

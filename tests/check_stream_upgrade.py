@@ -9,8 +9,8 @@ with sync_playwright() as p:
   context.route('https://media.example/**',lambda route:route.fulfill(body=clip,content_type='video/mp4'))
   page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)));page.route('https://www.youtube.com/**',lambda route:route.abort());pages.append(page)
  host,guest=pages
- host.goto(BASE);assert host.locator('#homeCreate').is_visible();assert not host.locator('.shell').is_visible()
- host.locator('#homeJoin').click();host.wait_for_url('**/join');host.reload();assert host.locator('#joinCode').is_visible();assert not host.locator('.workspace').is_visible()
+ host.goto(BASE);assert host.locator('.hero').is_visible();assert not host.locator('.shell').count()
+ host.goto(BASE+'/join');host.wait_for_url('**/join');host.reload();assert host.locator('#joinCode').is_visible();assert not host.locator('.workspace').is_visible()
  host.goto(BASE+'/create');host.reload();assert host.locator('#displayName').is_visible();assert not host.locator('#joinCode').is_visible()
  host.locator('#displayName').fill('Peach');host.locator('#setupSubmit').click();host.wait_for_selector('body.room-connected');host.evaluate("showScreen('watch')");room=host.evaluate('roomId');url=BASE+'/api/rooms/'+room
  guest.goto(BASE+'/?room='+room);guest.locator('#displayName').fill('Berry');guest.locator('#setupSubmit').click();guest.wait_for_selector('body.room-connected')

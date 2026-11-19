@@ -1,0 +1,32 @@
+[
+  {
+    "engine": "chromium",
+    "passed": true,
+    "guest_and_account_home_profile": true,
+    "screen_scoped_requests": true,
+    "one_visible_profile_and_room_return": true,
+    "contextual_picture_actions": true,
+    "guest_upgrade_keeps_player": true,
+    "single_auth_navigation": true,
+    "signout_cancel_and_host_transfer": true,
+    "portrait_landscape_desktop": true,
+    "physical_phones": false,
+    "media": "decoded synthetic HTTPS video",
+    "navigation_unload_diagnostics": 0
+  },
+  {
+    "engine": "webkit",
+    "passed": true,
+    "guest_and_account_home_profile": true,
+    "screen_scoped_requests": true,
+    "one_visible_profile_and_room_return": true,
+    "contextual_picture_actions": true,
+    "guest_upgrade_keeps_player": true,
+    "single_auth_navigation": true,
+    "signout_cancel_and_host_transfer": true,
+    "portrait_landscape_desktop": true,
+    "physical_phones": false,
+    "media": "simulated player",
+    "navigation_unload_diagnostics": 0
+  }
+]

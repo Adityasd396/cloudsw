@@ -5,6 +5,6 @@ module.exports = ({config}) => {
   return {
     ...config,
     android:{...config.android,usesCleartextTraffic:!release},
-    ios:{...config.ios,infoPlist:{...config.ios?.infoPlist,NSAppTransportSecurity:release?{}:{NSAllowsLocalNetworking:true}}}
+    ios:{...config.ios,infoPlist:{...config.ios?.infoPlist,NSPhotoLibraryUsageDescription:'Choose a picture or GIF to share in Solace.',NSCameraUsageDescription:'Take a photo only when you choose to attach one in Solace.',NSAppTransportSecurity:release?{}:{NSAllowsLocalNetworking:true}}}
   };
 };

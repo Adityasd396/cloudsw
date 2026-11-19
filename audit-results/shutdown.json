@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "shutdown_seconds": 1.063,
+  "signal": "CTRL_BREAK",
+  "committed_state_retained": true,
+  "listener_released": true
+}

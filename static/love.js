@@ -12,8 +12,8 @@ function openLove(){
   try{if(ready){loveWasMuted=player.isMuted();player.mute()}}catch{}
   loveOverlay=element('dialog','love-overlay');
   const close=element('button','love-close','Close ♡');close.type='button';close.setAttribute('aria-label','Close love surprise');close.onclick=closeLove;
-  const frame=element('iframe','love-frame');frame.title='For Jaanu, with love';frame.src='/static/love.html';frame.allow='autoplay; fullscreen';
-  loveOverlay.setAttribute('aria-label','A little love for Jaanu');loveOverlay.append(close,frame);
+  const frame=element('iframe','love-frame');frame.title='A little love, just for you';frame.src='/love';frame.allow='autoplay; fullscreen';
+  loveOverlay.setAttribute('aria-label','A little love for you');loveOverlay.append(close,frame);
   loveOverlay.addEventListener('cancel',event=>{event.preventDefault();closeLove()});
   document.body.append(loveOverlay);loveOverlay.showModal();close.focus();
 }
@@ -24,5 +24,6 @@ render=function(data){
   if(loveRoom!==data.id){closeLove();loveRoom=data.id;loveCursor=latest;return}
   const surprise=messages.some(message=>message.id>loveCursor&&message.body.trim().toLowerCase()==='/iloveyou');
   loveCursor=Math.max(loveCursor,latest);
-  if(surprise)openLove();
+  if(data.love_enabled===false)closeLove();
+  if(surprise&&data.love_enabled!==false)openLove();
 };

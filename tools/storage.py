@@ -51,6 +51,11 @@ def restore(source,target):
             with closing(sqlite3.connect(target/name)) as connection:
                 connection.execute('CREATE TABLE IF NOT EXISTS app_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
                 connection.execute("INSERT INTO app_metadata VALUES('generation',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(secrets.token_hex(16),));connection.commit()
+                for table in ('account_sessions','account_tokens','native_handoffs','dm_typing','discovery_leases','world_presence'):
+                    if connection.execute('SELECT 1 FROM sqlite_master WHERE name=?',(table,)).fetchone():connection.execute('DELETE FROM '+table)
+                if connection.execute("SELECT 1 FROM sqlite_master WHERE name='room_settings'").fetchone():connection.execute('UPDATE room_settings SET epoch=epoch+1,link_hash=NULL,link_token=NULL')
+                if connection.execute("SELECT 1 FROM sqlite_master WHERE name='room_invitations'").fetchone():connection.execute("UPDATE room_invitations SET status='revoked' WHERE status='pending'")
+                connection.commit()
         if name=='solace-admin.db':
             with closing(sqlite3.connect(target/name)) as connection:
                 if connection.execute("SELECT 1 FROM sqlite_master WHERE name='admin_sessions'").fetchone():connection.execute('DELETE FROM admin_sessions');connection.commit()

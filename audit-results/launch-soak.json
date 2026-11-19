@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "seconds": 121.2,
+  "clients": 2,
+  "accounts": true,
+  "actual_media": "synthetic H264/AAC 150 seconds",
+  "drift_seconds": {
+    "n": 55,
+    "p50": 0.029,
+    "p95": 0.209,
+    "max": 0.899
+  },
+  "room_roundtrip_ms": {
+    "n": 55,
+    "p50": 15.352,
+    "p95": 31.481,
+    "max": 42.157
+  },
+  "server_rss_mib": {
+    "n": 55,
+    "p50": 49.605,
+    "p95": 49.805,
+    "max": 50.02
+  },
+  "server_cpu_one_core_percent": {
+    "n": 55,
+    "p50": 3.4,
+    "p95": 5.9,
+    "max": 6.7
+  },
+  "browser_errors": [],
+  "physical_phones": false,
+  "controls": "pause/resume/seek every 20 seconds; hug and orientation changes every 25 seconds",
+  "limit": "Short local soak; does not certify three hours, WAN or mobile hardware"
+}

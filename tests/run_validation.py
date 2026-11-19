@@ -63,7 +63,8 @@ def local_checks():
     finally:fixture.tearDown()
 
 def live_checks():
-    base='https://aditya211.pythonanywhere.com'
+    if '--base' not in sys.argv:raise ValueError('Pass an explicitly approved --base URL; no production default is used')
+    base=sys.argv[sys.argv.index('--base')+1].rstrip('/')
     def client():return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     host,guest=client(),client()
     def request(c,path,data=None):

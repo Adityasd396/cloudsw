@@ -12,7 +12,7 @@ def register_game(app, db):
     @app.route('/api/rooms/<room_id>/basketball', methods=['GET', 'POST'])
     def basketball(room_id):
         connection=db()
-        connection.execute('BEGIN IMMEDIATE')
+        connection.execute('BEGIN IMMEDIATE' if request.method=='POST' else 'BEGIN')
         if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
             return jsonify(error='Room not found.'),404
         members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
@@ -90,7 +90,7 @@ def register_game(app, db):
     @app.route('/api/rooms/<room_id>/game', methods=['GET', 'POST'])
     def room_game(room_id):
         connection=db()
-        connection.execute('BEGIN IMMEDIATE')
+        connection.execute('BEGIN IMMEDIATE' if request.method=='POST' else 'BEGIN')
         if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
             return jsonify(error='Room not found.'),404
         members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
@@ -124,7 +124,7 @@ def register_game(app, db):
                 game['revision']+=1
             elif action in ('move','reset'):
                 if not role:return jsonify(error='Join the game to play.'),403
-                if data.get('revision')!=game['revision']:
+                if type(data.get('revision')) is not int or data.get('revision')!=game['revision']:
                     return jsonify(error='The game changed. Try again.'),409
                 if action=='reset':
                     if not game['winner']:return jsonify(error='Finish this round before starting another.'),409

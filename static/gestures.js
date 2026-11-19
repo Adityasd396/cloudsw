@@ -1,10 +1,13 @@
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.SolaceGestures=factory()})(typeof globalThis!=='undefined'?globalThis:this,function(){
  const commands=Object.freeze({
-  '/hug':{emoji:'🫂',text:'A warm hug, just for you'},
-  '/kiss':{emoji:'😘',text:'A little kiss across the distance'},
-  '/cuddle':{emoji:'🥰',text:'Come a little closer'},
-  '/missyou':{emoji:'💌',text:'Wish you were right here'},
-  '/cheer':{emoji:'🫶',text:'Always cheering for you'}
+  '/love':{emoji:'💖',text:'Love, all around you',effect:'love'},
+  '/heartglitter':{emoji:'✨',text:'A little heart glitter',effect:'glitter'},
+  '/clap':{emoji:'👏',text:'All the applause for you',effect:'clap'},
+  '/hug':{emoji:'🫂',text:'Wrapping you in the warmest hug',effect:'hug'},
+  '/kiss':{emoji:'😘',text:'A little kiss, all the way to you',effect:'kiss'},
+  '/cuddle':{emoji:'🥰',text:'A cozy little place beside me',effect:'cuddle'},
+  '/missyou':{emoji:'💌',text:'Saving this little moment for you',effect:'missyou'},
+  '/cheer':{emoji:'🫶',text:'Your own little cheering section',effect:'cheer'}
  });
  function parse(body){const key=typeof body==='string'?body.trim().toLowerCase():'';return Object.hasOwn(commands,key)?{command:key,...commands[key]}:null}
  class Stream{

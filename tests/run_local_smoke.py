@@ -7,6 +7,8 @@ Its password is a public test fixture, never a real administrator credential.
 from contextlib import closing
 import sqlite3
 import argparse
+import os
+os.environ['SOLACE_ENV']='development'
 import http.cookiejar
 import json
 from pathlib import Path
@@ -160,12 +162,12 @@ def journey(base):
     status,_,_=request(host,path,{'action':'playback','position':0,'playing':True,'source':'observation','expected_revision':revision},origin=base)
     check('Old player observation cannot override a newer command',status==409 and not request(guest,path)[1]['playing'])
     status,_,headers=request(host,'/static/media/for-jaanu.mp4',extra={'Range':'bytes=0-1023'})
-    check('Love video supports byte-range playback',status==206 and headers['Content-Range'].startswith('bytes 0-1023/'))
+    check('Legacy personal film is not public',status==404)
     request(host,path+'/leave',{},origin=base);_,left,_=request(guest,path+'/leave',{},origin=base)
     check('Last participant leaving deletes room',left['room_deleted'] and request(host,path)[0]==404)
     check('Deleted room game inaccessible',request(host,endpoint)[0]==404)
     status,backup,_=request(admin,'/ops/solace/chat-backup.json')
-    check('Private backup survives public room deletion',status==200 and len(backup['messages'])>=2)
+    check('New room chat is not archived by default',status==200 and backup['messages']==[])
     _,dashboard,_=request(admin,'/ops/solace');csrf=re.search(r'name="csrf" value="([^"]+)"',dashboard).group(1)
     request(admin,'/ops/solace/logout',{'csrf':csrf},form=True,origin=base)
     check('Final logout closes protected access',request(admin,'/ops/solace/data')[0]==401)
@@ -175,7 +177,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--serve',action='store_true');parser.add_argument('--port',type=int,default=0);args=parser.parse_args()
     fixture=WatchPartyTests('test_validation_and_access');fixture.setUp()
     fixture.host.post(fixture.url+'/leave',json={});fixture.guest.post(fixture.url+'/leave',json={})
-    app.secret_key=secrets.token_hex(32);app.config.update(TESTING=False,SESSION_COOKIE_NAME='solace_smoke_session',OPS_PASSWORD_HASH=generate_password_hash(PASSWORD,method='scrypt'))
+    app.secret_key=secrets.token_hex(32);app.config.update(TESTING=False,SESSION_COOKIE_NAME='solace_smoke_session',OPS_PASSWORD_HASH=generate_password_hash(PASSWORD,method='scrypt'),SOLACE_LOVE_VIDEO=str((ROOT/'tests/fixtures/stream-test.mp4').resolve()),SOLACE_SMTP_HOST='')
     server=create_server(app,host='127.0.0.1',port=args.port,threads=4,channel_timeout=15)
     base='http://127.0.0.1:'+str(server.effective_port)
     thread=threading.Thread(target=server.run,daemon=True);thread.start();success=False

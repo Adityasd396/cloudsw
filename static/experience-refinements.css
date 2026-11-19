@@ -11,3 +11,5 @@
 
 
 .chat-theme-settings h2{font-size:15px;margin-top:26px}.theme-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.theme-choice{min-height:52px;border:1px solid #dec2ef30;border-radius:16px;background:#241d2e;color:#f5edf8;font-size:13px;padding:10px}.theme-choice::before{content:'';display:inline-block;width:18px;height:14px;border-radius:8px 8px 2px 8px;background:var(--swatch);margin-right:8px;vertical-align:middle}.theme-choice[aria-pressed=true]{outline:2px solid #e2c5ee;outline-offset:1px}.solace-v2 .chat{background:var(--chat-background,#15111d);border-radius:16px 16px 0 0}.solace-v2 #messages .chat-message>div:not(.mini-avatar){background:var(--chat-received,#2b2435)}.solace-v2 #messages .chat-message.message-mine>div:not(.mini-avatar){background:var(--chat-mine,#8064c5)}
+
+@media(max-width:872px){.game-screen-frame.ludo-table{width:calc(100% + 32px);margin-left:-16px;border-radius:0}}

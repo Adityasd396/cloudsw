@@ -1,0 +1,507 @@
+{
+  "release": "2026.11.19.5",
+  "scope": "Local disposable identities and synthetic media only; no production access or deployment",
+  "merge_recovery": {
+    "files": 59,
+    "hunks": 144,
+    "each_resolution_matched_verified_2026_11_19_4_before_UI_changes": true,
+    "original_conflict_backup": ".openai/pre-navigation-merge-20261119.zip",
+    "ui_backup": ".openai/pre-navigation-ui-20261119.zip",
+    "previous_archives_preserved": true,
+    "personal_video_preserved_outside_public_assets": true,
+    "release_guard": "Reject merge markers, broken Python and invalid JSON before packaging"
+  },
+  "checks": {
+    "backend": 169,
+    "backend_seconds": 164.528,
+    "client": 68,
+    "typescript": "passed",
+    "android_ios_js_exports": "passed",
+    "browser_js_syntax": 56,
+    "http_smoke": "61/61",
+    "git_whitespace": "passed with Windows CR-at-EOL handling"
+  },
+  "home_profile": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "guest_and_account_home_profile": true,
+      "screen_scoped_requests": true,
+      "one_visible_profile_and_room_return": true,
+      "contextual_picture_actions": true,
+      "guest_upgrade_keeps_player": true,
+      "single_auth_navigation": true,
+      "signout_cancel_and_host_transfer": true,
+      "portrait_landscape_desktop": true,
+      "physical_phones": false,
+      "media": "decoded synthetic HTTPS video",
+      "navigation_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "guest_and_account_home_profile": true,
+      "screen_scoped_requests": true,
+      "one_visible_profile_and_room_return": true,
+      "contextual_picture_actions": true,
+      "guest_upgrade_keeps_player": true,
+      "single_auth_navigation": true,
+      "signout_cancel_and_host_transfer": true,
+      "portrait_landscape_desktop": true,
+      "physical_phones": false,
+      "media": "simulated player",
+      "navigation_unload_diagnostics": 0
+    }
+  ],
+  "community": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "media": "actual decoded synthetic HTTPS video",
+      "navigation_keeps_player_and_command_revision": true,
+      "public_chat_between_strangers": true,
+      "choice_saved": true,
+      "multiple_tabs_unique": true,
+      "settings_persisted": true,
+      "reconnect_preserves_draft_and_player": true,
+      "explicit_room_switch_verified": true,
+      "navigation_unload_diagnostics": 0,
+      "keyboard_cycles": [
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        }
+      ],
+      "physical_devices": false
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "media": "simulated player",
+      "navigation_keeps_player_and_command_revision": true,
+      "public_chat_between_strangers": true,
+      "choice_saved": true,
+      "multiple_tabs_unique": true,
+      "settings_persisted": true,
+      "reconnect_preserves_draft_and_player": true,
+      "explicit_room_switch_verified": true,
+      "navigation_unload_diagnostics": 0,
+      "keyboard_cycles": [
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        }
+      ],
+      "physical_devices": false
+    }
+  ],
+  "messaging": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "friend_preview_explicit_request": true,
+      "text_typing_images_gif_pause_viewer_cancel": true,
+      "saved_identity_unnamed_room_media": true,
+      "mobile_landscape_desktop": true,
+      "physical_devices": false,
+      "webkit_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "friend_preview_explicit_request": true,
+      "text_typing_images_gif_pause_viewer_cancel": true,
+      "saved_identity_unnamed_room_media": true,
+      "mobile_landscape_desktop": true,
+      "physical_devices": false,
+      "webkit_unload_diagnostics": 0
+    }
+  ],
+  "social_invitations": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false,
+      "expected_navigation_cancellation_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false,
+      "expected_navigation_cancellation_diagnostics": 0
+    }
+  ],
+  "safety": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "discovery_consent": true,
+      "connect_accept_shared_profile": true,
+      "report_submission": true,
+      "named_staff_mfa_login_logout": true,
+      "private_telemetry_redacted": true,
+      "portrait_landscape_desktop": true,
+      "physical_devices": false,
+      "navigation_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "discovery_consent": true,
+      "connect_accept_shared_profile": true,
+      "report_submission": true,
+      "named_staff_mfa_login_logout": true,
+      "private_telemetry_redacted": true,
+      "portrait_landscape_desktop": true,
+      "physical_devices": false,
+      "navigation_unload_diagnostics": 0
+    }
+  ],
+  "keyboard": [
+    {
+      "passed": true,
+      "physical_phone": false,
+      "media": "simulated player with real Flask room transport",
+      "four_destinations": true,
+      "back_ancestry": true,
+      "love_copy_anonymized_private_film_excluded": true,
+      "cycles": [
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.031
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.04
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.039
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.047
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.043
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.479
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.053
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.04
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.145
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.054
+        }
+      ]
+    }
+  ],
+  "games": [
+    {
+      "passed": true,
+      "themes_saved_per_device": true,
+      "ttt_series_mutual_rematch": true,
+      "hoops_cooperative_win": true,
+      "ludo_quick_preview_move": true,
+      "both_orientations": true,
+      "stream_drift_seconds": [
+        0.048,
+        0.038,
+        0.039
+      ],
+      "physical_phones": false
+    }
+  ],
+  "queue": [
+    {
+      "passed": true,
+      "separate_entry_refresh": true,
+      "portrait_footer_during_real_video": true,
+      "actual_media_auto_queue_both_users": true,
+      "stale_end_ignored": true,
+      "search_pagination": true,
+      "provider_screens": true,
+      "shared_goal_cheer": true,
+      "physical_phone": false
+    }
+  ],
+  "packaging": {
+    "status": "passed sequential generated-release Home/Profile, community, messaging and invitation checks in Chromium/WebKit",
+    "extracted_zip_boot": "passed schema 8, consent, community and room deletion checks",
+    "private_files_excluded": true,
+    "final_layout_recheck": "passed final packaged Home/Profile in Chromium and WebKit, including single desktop menu and retained mobile tabs",
+    "source_manifest_files": 347,
+    "pythonanywhere_files": 139
+  },
+  "notes": [
+    "Room creation confirmation bridge now loads before room form handlers, fixing a fast-tap bypass",
+    "One WebKit navigation-abort diagnostic is separated from application errors",
+    "Initial parallel browser runs emitted transient SQLite 503 responses; isolated guest/account flows passed, so this is not a capacity certification",
+    "Keyboard harness keeps both simulated phones visible and waits for the same reconnect readiness required by controls; it waits for a new revision and intended play/pause state",
+    "Existing physical-device, dependency and operational launch gates remain in LAUNCH-READINESS.md",
+    "Desktop menu visibility was checked at 1280x800; mobile/landscape compact tabs at 390x844 and 844x390; the player stayed mounted"
+  ],
+  "untested": [
+    "Actual iPhone/Android keyboards, native signed applications and OS background behavior",
+    "Production deployment, sustained WAN capacity and public-launch operator configuration"
+  ],
+  "packaged_results": {
+    "home-profile": [
+      {
+        "engine": "chromium",
+        "passed": true,
+        "guest_and_account_home_profile": true,
+        "screen_scoped_requests": true,
+        "one_visible_profile_and_room_return": true,
+        "contextual_picture_actions": true,
+        "guest_upgrade_keeps_player": true,
+        "single_auth_navigation": true,
+        "signout_cancel_and_host_transfer": true,
+        "portrait_landscape_desktop": true,
+        "physical_phones": false,
+        "media": "decoded synthetic HTTPS video",
+        "navigation_unload_diagnostics": 0
+      },
+      {
+        "engine": "webkit",
+        "passed": true,
+        "guest_and_account_home_profile": true,
+        "screen_scoped_requests": true,
+        "one_visible_profile_and_room_return": true,
+        "contextual_picture_actions": true,
+        "guest_upgrade_keeps_player": true,
+        "single_auth_navigation": true,
+        "signout_cancel_and_host_transfer": true,
+        "portrait_landscape_desktop": true,
+        "physical_phones": false,
+        "media": "simulated player",
+        "navigation_unload_diagnostics": 0
+      }
+    ],
+    "community": [
+      [
+        {
+          "engine": "chromium",
+          "passed": true,
+          "media": "actual decoded synthetic HTTPS video",
+          "navigation_keeps_player_and_command_revision": true,
+          "public_chat_between_strangers": true,
+          "choice_saved": true,
+          "multiple_tabs_unique": true,
+          "settings_persisted": true,
+          "reconnect_preserves_draft_and_player": true,
+          "explicit_room_switch_verified": true,
+          "navigation_unload_diagnostics": 0,
+          "keyboard_cycles": [
+            {
+              "orientation": "portrait",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "portrait",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "landscape",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "landscape",
+              "latest_visible": true,
+              "overlap": false
+            }
+          ],
+          "physical_devices": false
+        },
+        {
+          "engine": "webkit",
+          "passed": true,
+          "media": "simulated player",
+          "navigation_keeps_player_and_command_revision": true,
+          "public_chat_between_strangers": true,
+          "choice_saved": true,
+          "multiple_tabs_unique": true,
+          "settings_persisted": true,
+          "reconnect_preserves_draft_and_player": true,
+          "explicit_room_switch_verified": true,
+          "navigation_unload_diagnostics": 0,
+          "keyboard_cycles": [
+            {
+              "orientation": "portrait",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "portrait",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "landscape",
+              "latest_visible": true,
+              "overlap": false
+            },
+            {
+              "orientation": "landscape",
+              "latest_visible": true,
+              "overlap": false
+            }
+          ],
+          "physical_devices": false
+        }
+      ]
+    ],
+    "messaging": [
+      {
+        "engine": "chromium",
+        "passed": true,
+        "friend_preview_explicit_request": true,
+        "text_typing_images_gif_pause_viewer_cancel": true,
+        "saved_identity_unnamed_room_media": true,
+        "mobile_landscape_desktop": true,
+        "physical_devices": false,
+        "webkit_unload_diagnostics": 0
+      },
+      {
+        "engine": "webkit",
+        "passed": true,
+        "friend_preview_explicit_request": true,
+        "text_typing_images_gif_pause_viewer_cancel": true,
+        "saved_identity_unnamed_room_media": true,
+        "mobile_landscape_desktop": true,
+        "physical_devices": false,
+        "webkit_unload_diagnostics": 0
+      }
+    ],
+    "social": [
+      {
+        "engine": "chromium",
+        "passed": true,
+        "guests_returning_friends_invitations_visibility": true,
+        "portrait_landscape_desktop": true,
+        "shared_controls": true,
+        "physical_phones": false,
+        "expected_navigation_cancellation_diagnostics": 0
+      },
+      {
+        "engine": "webkit",
+        "passed": true,
+        "guests_returning_friends_invitations_visibility": true,
+        "portrait_landscape_desktop": true,
+        "shared_controls": true,
+        "physical_phones": false,
+        "expected_navigation_cancellation_diagnostics": 0
+      }
+    ]
+  }
+}

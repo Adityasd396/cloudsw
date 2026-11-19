@@ -1,0 +1,22 @@
+{
+  "navigation_dom_content_loaded_ms": {
+    "n": 24,
+    "p50": 147.9,
+    "p95": 192.2,
+    "max": 222.4
+  },
+  "subresource_transfer_bytes": {
+    "n": 24,
+    "p50": 197088.0,
+    "p95": 197088,
+    "max": 197088
+  },
+  "subresource_requests": {
+    "n": 24,
+    "p50": 36.0,
+    "p95": 36,
+    "max": 36
+  },
+  "browser_errors": [],
+  "scope": "24 fresh Chromium contexts, mobile viewport, loopback, external requests blocked; not WAN or phone timing"
+}

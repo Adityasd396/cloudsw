@@ -62,3 +62,13 @@ class MatchOptionsTests(unittest.TestCase):
             self.assertEqual(response.status_code,200,response.json)
             other=self.guest.get(url).json
             self.assertEqual(other['revision'],state['revision']);self.assertEqual(other['cheer']['emoji'],'🫶')
+    def test_last_roll_keeps_one_identity_and_result_after_moves_and_polling(self):
+        from unittest.mock import patch
+        url=self.join('ludo');state=self.host.get(url).json
+        state=self.host.post(url,json={'action':'start','revision':state['revision']}).json
+        with patch('ludo_game.secrets.randbelow',return_value=5):
+            state=self.host.post(url,json={'action':'roll','revision':state['revision']}).json
+        roll=state['last_roll'];self.assertEqual(roll['dice'],6);self.assertTrue(roll['id']);self.assertGreaterEqual(state['server_time'],roll['created'])
+        moved=self.host.post(url,json={'action':'move','token':0,'revision':state['revision']}).json
+        self.assertNotEqual(moved['event']['id'],roll['id']);self.assertEqual(moved['last_roll'],roll)
+        for _ in range(3):self.assertEqual(self.guest.get(url).json['last_roll'],roll)

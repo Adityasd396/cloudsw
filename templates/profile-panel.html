@@ -1,0 +1,1 @@
+{% extends 'public-base.html' %}{% block head %}<meta name="account-csrf" content="{{ account_csrf }}">{% endblock %}{% block content %}<h1>{{ 'Report privately' if request.path=='/report' else 'Profile preview' }}</h1><p>Only fields permitted for you are shown.</p><a href="/home">Back home</a>{% endblock %}

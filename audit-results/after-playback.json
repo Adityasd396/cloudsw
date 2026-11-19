@@ -1,0 +1,140 @@
+{
+  "source_fingerprint": "b7f23d20149bb8efb73453ffffe5205c6c65e70b72dae9bdf42770c2a7caa1f6",
+  "startup_ms": {
+    "n": 24,
+    "p50": 29.35,
+    "p95": 103.4,
+    "max": 749.6
+  },
+  "seek_ms": {
+    "n": 24,
+    "p50": 4.5,
+    "p95": 5.8,
+    "max": 12.2
+  },
+  "resume_ms": {
+    "n": 24,
+    "p50": 0.3,
+    "p95": 0.6,
+    "max": 0.9
+  },
+  "normal_playback": {
+    "waiting": 48,
+    "stalled": 0,
+    "errors": [],
+    "buffer_ms": 912.0000001788139,
+    "rebuffer_count": 0,
+    "rebuffer_ms": 0,
+    "expected_waits": 48,
+    "current_time": 14.000909,
+    "frames": {
+      "total": 158,
+      "dropped": 0
+    }
+  },
+  "concurrent_playback": [
+    {
+      "clients": 2,
+      "all_advanced": true,
+      "errors": 0
+    },
+    {
+      "clients": 4,
+      "all_advanced": true,
+      "errors": 0
+    }
+  ],
+  "http_tests": [
+    {
+      "range": "bytes=0-1023",
+      "status": 206,
+      "content_range": "bytes 0-1023/1914020",
+      "bytes": 1024
+    },
+    {
+      "range": "bytes=-128",
+      "status": 206,
+      "content_range": "bytes 1913892-1914019/1914020",
+      "bytes": 128
+    },
+    {
+      "range": "bytes=999999999-",
+      "status": 416,
+      "content_range": "bytes */1914020",
+      "bytes": 177
+    },
+    {
+      "case": "/__audit__/protected.mp4",
+      "status": 401
+    },
+    {
+      "case": "/__audit__/protected.mp4",
+      "status": 206
+    },
+    {
+      "case": "/__audit__/expired.mp4",
+      "status": 403
+    },
+    {
+      "case": "conditional ETag",
+      "status": 304,
+      "bytes": 0
+    }
+  ],
+  "media_failures": [
+    {
+      "case": "bad.mp4",
+      "expected": "Media error, recoverable by loading a valid source",
+      "actual": {
+        "code": 4,
+        "message": "PipelineStatus::DEMUXER_ERROR_COULD_NOT_OPEN: FFmpegDemuxer: open context failed"
+      }
+    },
+    {
+      "case": "media/missing.mp4",
+      "expected": "Media error, recoverable by loading a valid source",
+      "actual": {
+        "code": 4,
+        "message": "MEDIA_ELEMENT_ERROR: Format error"
+      }
+    },
+    {
+      "case": "expired.mp4",
+      "expected": "Media error, recoverable by loading a valid source",
+      "actual": {
+        "code": 4,
+        "message": "MEDIA_ELEMENT_ERROR: Format error"
+      }
+    }
+  ],
+  "hls": {
+    "manifest_and_segments": true,
+    "real_playback": "playing",
+    "native_browser_support": "maybe"
+  },
+  "dash": "Not implemented by the application",
+  "slow_network": {
+    "profile": "64 KiB/s, 100 ms RTT injection",
+    "startup_ms": 1300.33,
+    "time": 1.630354,
+    "waiting": 3,
+    "stalled": 0,
+    "buffer_ms": 1803.3999999761581,
+    "rebuffer_count": 2,
+    "rebuffer_ms": 646.2999999523163
+  },
+  "interrupted_connection": {
+    "buffered_state": {
+      "time": 2.628279,
+      "buffered": 18
+    },
+    "reload_after_reconnect": "playing"
+  },
+  "browser": "Chromium, real H264/AAC decoding; autoplay allowed for measurements; no physical phones",
+  "browser_tree_rss_mib": {
+    "n": 97,
+    "p50": 529.516,
+    "p95": 748.926,
+    "max": 973.598
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "date": "2026-11-19",
+  "release": "2026.11.19.3",
+  "recommendation": "blocked for unrestricted public launch pending owner/dependency/device gates",
+  "production_accessed": false,
+  "backend": {
+    "passed": 150,
+    "includes_new_safety_tests": 23,
+    "evidence": "tests/test_safety.py and full unittest discovery"
+  },
+  "client": {
+    "passed": 68,
+    "typescript": true,
+    "javascript_syntax": {
+      "passed": true,
+      "javascript_files": 56
+    }
+  },
+  "http_smoke": {
+    "passed": 61,
+    "disposable": true
+  },
+  "browser_safety": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "discovery_consent": true,
+      "connect_accept_shared_profile": true,
+      "report_submission": true,
+      "named_staff_mfa_login_logout": true,
+      "private_telemetry_redacted": true,
+      "portrait_landscape_desktop": true,
+      "physical_devices": false,
+      "navigation_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "discovery_consent": true,
+      "connect_accept_shared_profile": true,
+      "report_submission": true,
+      "named_staff_mfa_login_logout": true,
+      "private_telemetry_redacted": true,
+      "portrait_landscape_desktop": true,
+      "physical_devices": false,
+      "navigation_unload_diagnostics": 0
+    }
+  ],
+  "keyboard": {
+    "passed": true,
+    "physical_phone": false,
+    "media": "simulated player with real Flask room transport",
+    "four_destinations": true,
+    "back_ancestry": true,
+    "love_copy_anonymized_private_film_excluded": true,
+    "cycles": [
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.018
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.013
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.014
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.013
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.014
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.015
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.014
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.017
+      }
+    ]
+  },
+  "games": {
+    "passed": true,
+    "themes_saved_per_device": true,
+    "ttt_series_mutual_rematch": true,
+    "hoops_cooperative_win": true,
+    "ludo_quick_preview_move": true,
+    "both_orientations": true,
+    "stream_drift_seconds": [
+      0.016,
+      0.007,
+      0.012
+    ],
+    "physical_phones": false
+  },
+  "actual_synthetic_media": {
+    "passed": true,
+    "public_home_portrait_landscape": true,
+    "shared_three_second_hug_chat_and_stream": true,
+    "draft_focus_and_video_preserved": true,
+    "guest_upgrade_preserves_real_history": true,
+    "profile_picture_edit_remove": true,
+    "history_graph_private_delete": true,
+    "signout_revokes_access": true,
+    "physical_phones": false
+  },
+  "queue_playback": {
+    "passed": true,
+    "separate_entry_refresh": true,
+    "portrait_footer_during_real_video": true,
+    "actual_media_auto_queue_both_users": true,
+    "stale_end_ignored": true,
+    "search_pagination": true,
+    "provider_screens": true,
+    "shared_goal_cheer": true,
+    "physical_phone": false
+  },
+  "measurements": "audit-results/safety-measurements.json",
+  "packaged_runtime": {
+    "passed": true,
+    "safety": [
+      {
+        "engine": "chromium",
+        "passed": true,
+        "discovery_consent": true,
+        "connect_accept_shared_profile": true,
+        "report_submission": true,
+        "named_staff_mfa_login_logout": true,
+        "private_telemetry_redacted": true,
+        "portrait_landscape_desktop": true,
+        "physical_devices": false,
+        "navigation_unload_diagnostics": 0
+      },
+      {
+        "engine": "webkit",
+        "passed": true,
+        "discovery_consent": true,
+        "connect_accept_shared_profile": true,
+        "report_submission": true,
+        "named_staff_mfa_login_logout": true,
+        "private_telemetry_redacted": true,
+        "portrait_landscape_desktop": true,
+        "physical_devices": false,
+        "navigation_unload_diagnostics": 0
+      }
+    ],
+    "messaging": [
+      {
+        "engine": "chromium",
+        "passed": true,
+        "friend_preview_explicit_request": true,
+        "text_typing_images_gif_pause_viewer_cancel": true,
+        "saved_identity_unnamed_room_media": true,
+        "mobile_landscape_desktop": true,
+        "physical_devices": false,
+        "webkit_unload_diagnostics": 0
+      },
+      {
+        "engine": "webkit",
+        "passed": true,
+        "friend_preview_explicit_request": true,
+        "text_typing_images_gif_pause_viewer_cancel": true,
+        "saved_identity_unnamed_room_media": true,
+        "mobile_landscape_desktop": true,
+        "physical_devices": false,
+        "webkit_unload_diagnostics": 0
+      }
+    ],
+    "source": "generated release, disposable local instance",
+    "metadata_rebuild": "Verification notes and screenshots only; runtime-file byte equality checked separately"
+  },
+  "limitations": [
+    "No physical iPhone or Android devices or real three-hour mobile run",
+    "No public deployment or production load/capacity test",
+    "Local small-sample latency is not a WAN/capacity benchmark",
+    "Existing mobile build-tool picomatch advisory remains unresolved",
+    "Owner must enroll named MFA staff, configure real production domain/contact/SMTP and infrastructure monitoring",
+    "Audit HMAC/SQLite triggers are not external immutable storage; database/secret operators can rewrite them",
+    "Anonymous users can evade identity restrictions by clearing browser data or creating another identity"
+  ],
+  "native_exports": {
+    "android": true,
+    "ios": true,
+    "signed_binaries": false
+  },
+  "late_fixes": [
+    "Guest and copied-cookie revocation",
+    "Private association and room-code inventory redaction",
+    "Atomic existing storage/gesture changes with named-staff audit",
+    "Report retry receipt survives blocking or source deletion",
+    "Discovery cursors bind to a non-reversible viewer hash"
+  ],
+  "docker_build": "not run: Docker executable unavailable",
+  "ci_execution": "workflow updated; remote CI not executed",
+  "backup_restore": "existing local integrity, restore, session/invite invalidation and maintenance regression tests pass; restore also clears discovery leases",
+  "measurements_snapshot": {
+    "environment": "loopback Waitress, synthetic users; no production data",
+    "limits": "25 sequential samples; concurrency 2 then 4 for 12 reads each; no capacity or WAN claim",
+    "measurements": {
+      "room_poll": {
+        "samples": 25,
+        "p50_ms": 15.919,
+        "p95_ms": 27.275,
+        "mean_bytes": 1188,
+        "errors": 0
+      },
+      "discovery_page": {
+        "samples": 25,
+        "p50_ms": 29.288,
+        "p95_ms": 34.723,
+        "mean_bytes": 202,
+        "errors": 0
+      },
+      "private_inbox": {
+        "samples": 25,
+        "p50_ms": 16.128,
+        "p95_ms": 29.153,
+        "mean_bytes": 55,
+        "errors": 0
+      },
+      "room_reads_concurrency_2": {
+        "samples": 12,
+        "p50_ms": 19.452,
+        "p95_ms": null,
+        "max_ms": 25.388,
+        "errors": 0
+      },
+      "room_reads_concurrency_4": {
+        "samples": 12,
+        "p50_ms": 14.197,
+        "p95_ms": null,
+        "max_ms": 43.189,
+        "errors": 0
+      }
+    }
+  }
+}

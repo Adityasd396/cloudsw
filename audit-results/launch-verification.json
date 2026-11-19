@@ -1,0 +1,17 @@
+{
+  "python_tests": 99,
+  "client_tests": 66,
+  "http_smoke_assertions": 61,
+  "javascript_syntax": "passed",
+  "native_types": "passed",
+  "android_ios_exports": "passed",
+  "chromium_real_media_accounts_games": "passed",
+  "webkit_accounts_keyboard_models": "passed",
+  "webkit_full_local_https_media": "failed: media error 4; plain HTTP fixture played; cause unresolved",
+  "firefox": "not installed",
+  "smtp": "mock integration passed; real delivery unverified",
+  "docker": "COPY/context fixes and startup regression; no engine available",
+  "ci": "definition supplied, not executed; npm audit gate intentionally fails unpatched build-tool advisory",
+  "physical_phones": false,
+  "production_touched": false
+}

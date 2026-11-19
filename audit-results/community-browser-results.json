@@ -1,0 +1,74 @@
+[
+  {
+    "engine": "chromium",
+    "passed": true,
+    "media": "actual decoded synthetic HTTPS video",
+    "navigation_keeps_player_and_command_revision": true,
+    "public_chat_between_strangers": true,
+    "choice_saved": true,
+    "multiple_tabs_unique": true,
+    "settings_persisted": true,
+    "reconnect_preserves_draft_and_player": true,
+    "explicit_room_switch_verified": true,
+    "navigation_unload_diagnostics": 0,
+    "keyboard_cycles": [
+      {
+        "orientation": "portrait",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "portrait",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "landscape",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "landscape",
+        "latest_visible": true,
+        "overlap": false
+      }
+    ],
+    "physical_devices": false
+  },
+  {
+    "engine": "webkit",
+    "passed": true,
+    "media": "simulated player",
+    "navigation_keeps_player_and_command_revision": true,
+    "public_chat_between_strangers": true,
+    "choice_saved": true,
+    "multiple_tabs_unique": true,
+    "settings_persisted": true,
+    "reconnect_preserves_draft_and_player": true,
+    "explicit_room_switch_verified": true,
+    "navigation_unload_diagnostics": 0,
+    "keyboard_cycles": [
+      {
+        "orientation": "portrait",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "portrait",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "landscape",
+        "latest_visible": true,
+        "overlap": false
+      },
+      {
+        "orientation": "landscape",
+        "latest_visible": true,
+        "overlap": false
+      }
+    ],
+    "physical_devices": false
+  }
+]

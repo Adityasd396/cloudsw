@@ -1,0 +1,206 @@
+{
+  "date": "2026-11-19",
+  "release": "2026.11.19.1",
+  "scope": "Disposable local data and synthetic media only",
+  "backend": {
+    "passed": 112,
+    "failed": 0
+  },
+  "client": {
+    "passed": 67,
+    "failed": 0
+  },
+  "typescript": "passed",
+  "javascript_syntax": "passed",
+  "native_exports": {
+    "android": "passed",
+    "ios": "passed",
+    "signed_binaries": false
+  },
+  "http_smoke": {
+    "passed": 61,
+    "total": 61
+  },
+  "browser": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false
+    }
+  ],
+  "keyboard": {
+    "passed": true,
+    "physical_phone": false,
+    "media": "simulated player with real Flask room transport",
+    "four_destinations": true,
+    "back_ancestry": true,
+    "love_copy_anonymized_private_film_excluded": true,
+    "cycles": [
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.024
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.029
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.021
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.025
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.012
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.013
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.011
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.012
+      }
+    ]
+  },
+  "real_media": {
+    "passed": true,
+    "public_home_portrait_landscape": true,
+    "shared_three_second_hug_chat_and_stream": true,
+    "draft_focus_and_video_preserved": true,
+    "guest_upgrade_preserves_real_history": true,
+    "profile_picture_edit_remove": true,
+    "history_graph_private_delete": true,
+    "signout_revokes_access": true,
+    "physical_phones": false
+  },
+  "games": {
+    "passed": true,
+    "themes_saved_per_device": true,
+    "ttt_series_mutual_rematch": true,
+    "hoops_cooperative_win": true,
+    "ludo_quick_preview_move": true,
+    "both_orientations": true,
+    "stream_drift_seconds": [
+      0.023,
+      0.011,
+      0.027
+    ],
+    "physical_phones": false
+  },
+  "limitations": [
+    "Physical Android/iPhone devices unavailable; native handoff and OS share sheet still need device acceptance.",
+    "Native universal/app links require a production domain and signed builds.",
+    "WebKit synthetic HTTPS decoding limitation and native build-tool advisory remain in LAUNCH-READINESS.md.",
+    "Public launch still requires configured production origin, operator details and optional external services.",
+    "Public discovery uses bounded foreground polling, not instantaneous cross-device socket delivery.",
+    "Earlier WebKit runs reported occasional stale-request cancellation diagnostics while deliberately navigating away. Requests now support page cancellation; the final packaged smoke recorded zero such diagnostics.",
+    "Guest blocks and bans are identity-scoped; clearing browser data can create a different anonymous identity. Public operation still needs an abuse-response process."
+  ],
+  "packaged_release_browser": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false,
+      "expected_navigation_cancellation_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "guests_returning_friends_invitations_visibility": true,
+      "portrait_landscape_desktop": true,
+      "shared_controls": true,
+      "physical_phones": false,
+      "expected_navigation_cancellation_diagnostics": 0
+    }
+  ],
+  "identity_expiry_followup": {
+    "passed": 12,
+    "failed": 0
+  }
+}

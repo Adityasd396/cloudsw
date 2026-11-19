@@ -38,7 +38,7 @@ with sync_playwright() as p:
   result=[]
   for page in pages:
    page.evaluate('''(path)=>{showScreen('game');gameFrame.src=path}''',BASE+'/static/'+kind+'?room='+room)
-   frame=page.frame_locator('.game-screen-frame');frame.locator('.agree-options').wait_for();result.append(frame)
+   frame=page.frame_locator('.game-screen-frame');frame.locator('.agree-options').wait_for(state='attached');result.append(frame)
   return result
  def state(frame):return frame.locator('body').evaluate("()=>typeof match!=='undefined'?match:game")
  def send(frame,action):
@@ -46,6 +46,7 @@ with sync_playwright() as p:
  def wait_revision(frame,revision):frame.locator('body').evaluate('''async(element,r)=>{const end=Date.now()+6000;while((typeof match!=='undefined'?match:game).revision<r){if(Date.now()>end)throw Error('Peer did not update');await new Promise(resolve=>setTimeout(resolve,40))}}''',revision)
  def configure(fs,values):
   for f in fs:
+   if f.locator('#ludoSettings').count():f.locator('#ludoSettings').click()
    for key,value in values.items():
     label='Match' if key in ['best_of','pawn_count'] else 'Play' if key=='mode' else 'Challenge'
     f.get_by_label(label,exact=True).select_option(str(value))
@@ -55,6 +56,8 @@ with sync_playwright() as p:
     raise AssertionError(json.dumps({'state':state(f),'text':f.locator('main').inner_text(),'errors':errors}))
    rev=state(f)['revision']
    for other in fs:wait_revision(other,rev)
+  for f in fs:
+   if f.locator('#ludoSettingsBack').is_visible():f.locator('#ludoSettingsBack').click()
  # Best-of-three, shared marks/winning line, alternating starter and mutual rematch.
  fs=frames('tictactoe.html')
  for f in fs:f.locator('#joinGame').click()
@@ -89,9 +92,7 @@ with sync_playwright() as p:
   for other in fs:wait_revision(other,rev)
   current=state(f)
   if current['legal']:
-   f.locator('#moves button').first.click();f.locator('.confirm-move').wait_for();host.wait_for_timeout(600)
-   assert f.locator('.destination-preview').count()==1
-   f.locator('.confirm-move').click();host.wait_for_timeout(200);rev=state(f)['revision']
+   f.locator('#moves button').first.click();host.wait_for_timeout(200);rev=state(f)['revision']
    for other in fs:wait_revision(other,rev)
    break
  else:raise AssertionError('No legal roll')
@@ -103,7 +104,7 @@ with sync_playwright() as p:
    page.set_viewport_size({'width':w,'height':h});page.wait_for_timeout(150)
    assert page.frame_locator('.game-screen-frame').locator('body').evaluate('document.documentElement.scrollWidth<=innerWidth')
  for page in pages:
-  page.emulate_media(reduced_motion='reduce');page.evaluate('gameFrame.contentWindow.location.reload()');page.frame_locator('.game-screen-frame').locator('.agree-options').wait_for();page.wait_for_timeout(200)
+  page.emulate_media(reduced_motion='reduce');page.evaluate('gameFrame.contentWindow.location.reload()');page.frame_locator('.game-screen-frame').locator('.agree-options').wait_for(state='attached');page.wait_for_timeout(200)
   assert page.frame_locator('.game-screen-frame').locator('body').evaluate('gpReduced===true')
  assert not errors,errors
  for page in pages:page.request.post(url+'/leave',data={})

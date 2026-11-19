@@ -1,0 +1,256 @@
+{
+  "release": "2026.11.19.2",
+  "date": "2026-11-19",
+  "backend": {
+    "passed": 127,
+    "failed": 0,
+    "followup_messaging": 15
+  },
+  "client": {
+    "passed": 68,
+    "failed": 0
+  },
+  "typescript": "passed",
+  "javascript_syntax": "passed",
+  "http_smoke": {
+    "passed": 61,
+    "total": 61
+  },
+  "ui": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "friend_preview_explicit_request": true,
+      "text_typing_images_gif_pause_viewer_cancel": true,
+      "saved_identity_unnamed_room_media": true,
+      "mobile_landscape_desktop": true,
+      "physical_devices": false,
+      "webkit_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "friend_preview_explicit_request": true,
+      "text_typing_images_gif_pause_viewer_cancel": true,
+      "saved_identity_unnamed_room_media": true,
+      "mobile_landscape_desktop": true,
+      "physical_devices": false,
+      "webkit_unload_diagnostics": 0
+    }
+  ],
+  "recovery": [
+    {
+      "passed": true,
+      "lost_reply_retry_exactly_once": true,
+      "new_draft_preserved_during_send": true,
+      "offline_retry": true,
+      "upload_retry_and_inflight_cancel": true,
+      "keyboard_models": [
+        {
+          "width": 390,
+          "viewport_height": 440,
+          "composer_visible": true
+        },
+        {
+          "width": 390,
+          "viewport_height": 844,
+          "composer_visible": true
+        },
+        {
+          "width": 390,
+          "viewport_height": 440,
+          "composer_visible": true
+        },
+        {
+          "width": 390,
+          "viewport_height": 844,
+          "composer_visible": true
+        },
+        {
+          "width": 844,
+          "viewport_height": 220,
+          "composer_visible": true
+        },
+        {
+          "width": 844,
+          "viewport_height": 390,
+          "composer_visible": true
+        },
+        {
+          "width": 844,
+          "viewport_height": 220,
+          "composer_visible": true
+        },
+        {
+          "width": 844,
+          "viewport_height": 390,
+          "composer_visible": true
+        }
+      ],
+      "physical_devices": false
+    }
+  ],
+  "keyboard_room_regression": [
+    {
+      "passed": true,
+      "physical_phone": false,
+      "media": "simulated player with real Flask room transport",
+      "four_destinations": true,
+      "back_ancestry": true,
+      "love_copy_anonymized_private_film_excluded": true,
+      "cycles": [
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.012
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "portrait",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.013
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.015
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0
+        },
+        {
+          "keyboard_model": "iphone-viewport",
+          "orientation": "landscape",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.01
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.013
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.0
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "portrait",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.011
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 0,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.013
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 1,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0
+        },
+        {
+          "keyboard_model": "android-resize",
+          "orientation": "landscape",
+          "cycle": 2,
+          "no_overlap": true,
+          "latest_visible": true,
+          "drift_seconds": 0.014
+        }
+      ]
+    }
+  ],
+  "games": [
+    {
+      "passed": true,
+      "themes_saved_per_device": true,
+      "ttt_series_mutual_rematch": true,
+      "hoops_cooperative_win": true,
+      "ludo_quick_preview_move": true,
+      "both_orientations": true,
+      "stream_drift_seconds": [
+        0.025,
+        0.006,
+        0.01
+      ],
+      "physical_phones": false
+    }
+  ],
+  "real_synthetic_media": [
+    {
+      "passed": true,
+      "public_home_portrait_landscape": true,
+      "shared_three_second_hug_chat_and_stream": true,
+      "draft_focus_and_video_preserved": true,
+      "guest_upgrade_preserves_real_history": true,
+      "profile_picture_edit_remove": true,
+      "history_graph_private_delete": true,
+      "signout_revokes_access": true,
+      "physical_phones": false
+    }
+  ],
+  "native_exports": {
+    "android": "passed",
+    "ios": "passed",
+    "signed_binaries": false
+  },
+  "poll_measurements": {
+    "full_metadata": {
+      "samples": 25,
+      "p50_ms": 4.635,
+      "p95_ms": 6.575,
+      "response_bytes": 1110
+    },
+    "unchanged_revision": {
+      "samples": 25,
+      "p50_ms": 4.349,
+      "p95_ms": 4.804,
+      "response_bytes": 851
+    },
+    "limits": "Sequential loopback checks with one synthetic picture; not a capacity or WAN benchmark."
+  },
+  "limits": [
+    "Physical iPhone/Android devices unavailable; native pickers, cookies, GIF rendering and background behavior need device acceptance.",
+    "No public deployment or production data accessed.",
+    "The follow-on Open World, safety and named-staff moderation work is not part of this messaging baseline.",
+    "Existing production configuration and unpatched native build-tool advisory remain documented in LAUNCH-READINESS.md."
+  ]
+}

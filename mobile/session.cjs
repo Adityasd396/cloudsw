@@ -1,6 +1,7 @@
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.SolaceSession=factory()})(typeof globalThis!=='undefined'?globalThis:this,function(){
- function pollPath(room,cursor,generation){const hasCursor=Number.isSafeInteger(cursor)&&cursor>=0;return '/api/rooms/'+encodeURIComponent(room)+(hasCursor?'?after='+cursor:'')+(generation?(hasCursor?'&':'?')+'generation='+encodeURIComponent(generation):'')}
+ function pollPath(room,cursor,generation,mediaRevision){const hasCursor=Number.isSafeInteger(cursor)&&cursor>=0;let path='/api/rooms/'+encodeURIComponent(room)+(hasCursor?'?after='+cursor:'')+(generation?(hasCursor?'&':'?')+'generation='+encodeURIComponent(generation):'');if(typeof mediaRevision==='string')path+=(path.includes('?')?'&':'?')+'media_after='+encodeURIComponent(mediaRevision);return path}
  function mergeRoomMessages(previous,next){
+  if(previous?.id===next.id&&previous.storage_generation===next.storage_generation&&!Object.hasOwn(next,'media_items')&&previous.media_items)next={...next,media_items:previous.media_items};
   if(!next.messages_delta)return next;
   const messages=new Map();if(previous?.id===next.id&&(!previous.storage_generation||!next.storage_generation||previous.storage_generation===next.storage_generation))for(const message of previous.messages||[])messages.set(message.id,message);
   for(const message of next.messages||[])messages.set(message.id,message);
