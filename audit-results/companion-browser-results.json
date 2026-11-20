@@ -1,0 +1,32 @@
+[
+  {
+    "engine": "chromium",
+    "passed": true,
+    "personal_settings_and_room_management_separate": true,
+    "contained_toggles": true,
+    "profile_and_friend_search": true,
+    "world_gif_avatars_reactions_receipts": true,
+    "in_app_request_and_game_notifications": true,
+    "three_games_without_stream_room": true,
+    "portrait_footer_after_play_and_video_change": true,
+    "compact_mobile_navigation": true,
+    "physical_devices": false,
+    "actual_media": true,
+    "webkit_navigation_diagnostics": 0
+  },
+  {
+    "engine": "webkit",
+    "passed": true,
+    "personal_settings_and_room_management_separate": true,
+    "contained_toggles": true,
+    "profile_and_friend_search": true,
+    "world_gif_avatars_reactions_receipts": true,
+    "in_app_request_and_game_notifications": true,
+    "three_games_without_stream_room": true,
+    "portrait_footer_after_play_and_video_change": true,
+    "compact_mobile_navigation": true,
+    "physical_devices": false,
+    "actual_media": false,
+    "webkit_navigation_diagnostics": 0
+  }
+]

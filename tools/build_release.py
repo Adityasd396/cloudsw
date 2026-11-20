@@ -10,12 +10,12 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 COMMUNITY_DOC='UX-COMMUNITY.md'
-SERVER={'SAFETY-OPERATIONS.md','OPEN-WORLD-REQUIREMENTS.md','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','setup_staff.py','MESSAGING.md','RETURNING-USERS.md','social.py','requirements.lock','.env.example','LAUNCH-READINESS.md','tools/maintenance.py','account_mail.py','user_storage.py','production.py','launch.py','game_options.py','ludo_game.py','app.py','room_game.py','admin_panel.py','setup_admin.py','requirements.txt','PYTHONANYWHERE.md','ADMIN-SETUP.md','DEPLOYMENT-RELIABILITY.md','PUBLIC-LAUNCH.md','release.json','tools/storage.py','tools/verify_deployment.py'}
+SERVER={'SOCIAL-EXPERIENCE.md','companions.py','SAFETY-OPERATIONS.md','OPEN-WORLD-REQUIREMENTS.md','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','setup_staff.py','MESSAGING.md','RETURNING-USERS.md','social.py','requirements.lock','.env.example','LAUNCH-READINESS.md','tools/maintenance.py','account_mail.py','user_storage.py','production.py','launch.py','game_options.py','ludo_game.py','app.py','room_game.py','admin_panel.py','setup_admin.py','requirements.txt','PYTHONANYWHERE.md','ADMIN-SETUP.md','DEPLOYMENT-RELIABILITY.md','PUBLIC-LAUNCH.md','release.json','tools/storage.py','tools/verify_deployment.py'}
 
 def validate_source(names,root=ROOT):
     for name in sorted(names):
         path=root/name
-        if path.suffix not in {'.py','.js','.cjs','.ts','.tsx','.json','.html','.css','.yml'}:continue
+        if path.name not in {'Dockerfile','.dockerignore','.env.example'} and path.suffix not in {'.py','.js','.cjs','.ts','.tsx','.json','.html','.css','.yml'}:continue
         content=path.read_text(encoding='utf-8-sig')
         if re.search(r'^(?:<<<<<<< .+|=======|>>>>>>> .+)\r?$',content,re.MULTILINE):
             raise ValueError('Unresolved merge conflict in release source: '+name)
@@ -43,11 +43,12 @@ def build(version):
         names.update(path.relative_to(ROOT).as_posix() for path in (ROOT/folder).glob(pattern) if path.is_file() and '__pycache__' not in path.parts)
     names={name for name in names if not name.startswith('static/media/')}
     validate_source(names)
-    # Remove only the obsolete personal film from a prior public release tree.
-    obsolete=(release/'static/media/for-jaanu.mp4').resolve()
-    if not obsolete.is_relative_to(release):raise ValueError('Unsafe obsolete asset path')
-    if obsolete.is_file():obsolete.unlink()
-    for template in ['templates/index.html','templates/world.html','templates/public-base.html','templates/home.html','templates/room-control.html','templates/messages.html','templates/space-settings.html','templates/space-games.html','templates/room-media.html','templates/media-view.html','templates/account.html','templates/email-action.html','templates/love-public.html','templates/admin.html','templates/admin-login.html','static/game.html','static/tictactoe.html','static/ludo.html']:
+    # Remove retired feature files from overlays as well as the new archives.
+    for name in ['static/love.js','static/love.html','static/love.css','static/love-film.js','templates/love-public.html','static/media/for-jaanu.mp4','mobile/tests/love.test.cjs','mobile/tests/love-audio.test.cjs']:
+        obsolete=(release/name).resolve()
+        if not obsolete.is_relative_to(release):raise ValueError('Unsafe obsolete asset path')
+        if obsolete.is_file():obsolete.unlink()
+    for template in ['templates/index.html','templates/play-session.html','templates/world.html','templates/public-base.html','templates/home.html','templates/room-control.html','templates/messages.html','templates/space-settings.html','templates/space-games.html','templates/room-media.html','templates/media-view.html','templates/account.html','templates/email-action.html','templates/admin.html','templates/admin-login.html','static/game.html','static/tictactoe.html','static/ludo.html']:
         path=ROOT/template
         source=path.read_text(encoding='utf-8')
         source=re.sub(r'<meta name="solace-release" content="[^"]*">','',source)

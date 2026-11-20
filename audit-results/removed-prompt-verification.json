@@ -1,0 +1,165 @@
+{
+  "version": "2026.11.20.2",
+  "date": "2026-11-20",
+  "feature_removed": true,
+  "web_and_native_trigger_removed": true,
+  "admin_control_and_endpoint_removed": true,
+  "room_flag_and_environment_option_removed": true,
+  "film_routes_return_404": true,
+  "retired_assets_excluded": true,
+  "old_enabled_setting_cannot_restore_feature": true,
+  "typed_command_is_plain_text": true,
+  "backend_tests_passed": 181,
+  "client_tests_passed": 67,
+  "http_smoke_checks_passed": 61,
+  "typescript_passed": true,
+  "android_ios_exports_passed": true,
+  "browser": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "personal_settings_and_room_management_separate": true,
+      "contained_toggles": true,
+      "profile_and_friend_search": true,
+      "world_gif_avatars_reactions_receipts": true,
+      "in_app_request_and_game_notifications": true,
+      "three_games_without_stream_room": true,
+      "portrait_footer_after_play_and_video_change": true,
+      "compact_mobile_navigation": true,
+      "physical_devices": false,
+      "actual_media": true,
+      "webkit_navigation_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "personal_settings_and_room_management_separate": true,
+      "contained_toggles": true,
+      "profile_and_friend_search": true,
+      "world_gif_avatars_reactions_receipts": true,
+      "in_app_request_and_game_notifications": true,
+      "three_games_without_stream_room": true,
+      "portrait_footer_after_play_and_video_change": true,
+      "compact_mobile_navigation": true,
+      "physical_devices": false,
+      "actual_media": false,
+      "webkit_navigation_diagnostics": 3
+    }
+  ],
+  "keyboard_and_plain_text_command": {
+    "passed": true,
+    "physical_phone": false,
+    "media": "simulated player with real Flask room transport",
+    "four_destinations": true,
+    "back_ancestry": true,
+    "retired_prompt_is_plain_chat": true,
+    "cycles": [
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.023
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.014
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.011
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.012
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.026
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.017
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.015
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.015
+      }
+    ]
+  },
+  "fresh_extracted_zip_smoke_passed": true,
+  "existing_data_preserved": true,
+  "migration_required": false,
+  "production_modified": false,
+  "deployment_note": "Existing installations must delete the exact retired static files listed in PYTHONANYWHERE.md; overlay uploads do not delete old files.",
+  "limitations": [
+    "No physical iPhone/Android devices tested.",
+    "Chromium decoded synthetic video; WebKit playback used a simulated player.",
+    "Native applications must be rebuilt."
+  ]
+}

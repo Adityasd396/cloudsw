@@ -63,7 +63,7 @@ window.addEventListener('popstate',()=>{if(!state||!roomId)return;history.pushSt
  if(document.activeElement?.matches('input,textarea')){document.activeElement.blur();return}
  if(document.body.classList.contains('solace-fullscreen')){exitSolaceFullscreen();return}
  if(!picker.hidden){picker.hidden=true;return}
- if(loveOverlay){closeLove();return}
+ 
  const dialog=[...document.querySelectorAll('dialog[open]')].at(-1);if(dialog)dialog.querySelector('button')?.click();
 });
 

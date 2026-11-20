@@ -61,7 +61,6 @@ def register_launch(app, db):
             CREATE INDEX IF NOT EXISTS account_session_expiry ON account_sessions(expires);
             CREATE TABLE IF NOT EXISTS launch_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS user_quotas(owner TEXT PRIMARY KEY,bytes INTEGER NOT NULL CHECK(bytes>=1048576));
-            INSERT OR IGNORE INTO launch_settings VALUES('love_enabled','0');
             INSERT OR IGNORE INTO launch_settings VALUES('user_storage_bytes','52428800');
             CREATE TABLE IF NOT EXISTS watch_history(id INTEGER PRIMARY KEY,owner TEXT NOT NULL,room TEXT NOT NULL,playback TEXT NOT NULL,video TEXT NOT NULL,title TEXT NOT NULL,started REAL NOT NULL,last REAL NOT NULL,seconds REAL NOT NULL DEFAULT 0,beat REAL NOT NULL,active INTEGER NOT NULL DEFAULT 0,UNIQUE(owner,room,playback));
             CREATE INDEX IF NOT EXISTS watch_owner_date ON watch_history(owner,started);
@@ -171,7 +170,7 @@ def register_launch(app, db):
     @app.before_request
     def launch_identity():
         initialize()
-        app.extensions['solace_social']['initialize']();app.extensions['solace_messaging']['initialize']();app.extensions['solace_people']['initialize']();app.extensions['solace_safety']['initialize']();app.extensions['solace_world']['initialize']()
+        app.extensions['solace_social']['initialize']();app.extensions['solace_messaging']['initialize']();app.extensions['solace_people']['initialize']();app.extensions['solace_safety']['initialize']();app.extensions['solace_world']['initialize']();app.extensions['solace_companions']['initialize']()
         if request.path=='/api/me/media' and request.method=='POST':request.max_content_length=8*1024*1024+16384
         key=app.instance_path;now=time.time()
         if now-cleaned.get(key,0)>3600:
@@ -202,14 +201,11 @@ def register_launch(app, db):
             return fail('Your security token expired. Refresh the page and try again.',403)
         result=app.extensions['solace_safety']['gate']()
         if result is not None:return result
+        # Retired personal assets must remain inaccessible on older installations.
         if request.path.startswith('/static/love') or request.path.startswith('/static/media/'):
-            # The old personal film is never a public asset, regardless of settings.
-            if request.path.startswith('/static/media/') or request.path=='/static/love.html':
-                abort(404)
+            abort(404)
         if request.path.startswith('/api/rooms/') and request.method=='POST':
             data=request.get_json(silent=True) or {}
-            if data.get('action')=='chat' and str(data.get('body','')).strip().lower()=='/iloveyou' and setting('love_enabled')!='1':
-                return fail('This gesture is turned off for this space.',409)
             if data.get('action')=='join' and limited('room-join',120,60):return fail('Too many room join attempts. Please wait a minute.',429)
         elif request.path=='/api/rooms' and request.method=='POST' and limited('room-create',30,900):
             return fail('Too many new rooms. Please try again later.',429)
@@ -239,7 +235,7 @@ def register_launch(app, db):
         if request.path not in PUBLIC:
             row=db().execute('SELECT room FROM members WHERE id=? ORDER BY seen DESC LIMIT 1',(session['uid'],)).fetchone()
             if row:room=row['room']
-        return dict(app_space=request.path in ('/profile','/report','/world','/safety','/home','/friends','/rooms','/settings','/messages','/games','/account','/history','/room-control','/room-media','/media-view'),nav_profile=app.extensions['solace_social']['person'](session['uid']),has_profile=bool(app.extensions['solace_social']['person'](session['uid'])),launch_seo=seo(request.path),account_csrf=csrf(),signed_in=bool(getattr(g,'account',None)),resume_room=room)
+        return dict(app_space=request.path in ('/profile','/report','/world','/play','/safety','/home','/friends','/rooms','/settings','/messages','/games','/account','/history','/room-control','/room-media','/media-view'),nav_profile=app.extensions['solace_social']['person'](session['uid']),has_profile=bool(app.extensions['solace_social']['person'](session['uid'])),launch_seo=seo(request.path),account_csrf=csrf(),signed_in=bool(getattr(g,'account',None)),resume_room=room)
     app.context_processor(launch_context)
 
     def public_page():
@@ -338,7 +334,7 @@ def register_launch(app, db):
             return send_file(io.BytesIO(picture),mimetype='image/png',max_age=0)
         if limited('avatar',15):return fail('Please wait before changing your picture again.',429)
         if request.method=='DELETE':
-            db().execute('UPDATE '+table+' SET avatar=NULL WHERE '+column+'=?',(account['id'],));db().commit();return jsonify(ok=True)
+            db().execute('UPDATE '+table+' SET avatar=NULL WHERE '+column+'=?',(account['id'],));db().execute('UPDATE profiles SET updated=? WHERE id=?',(time.time(),account['id']));db().commit();return jsonify(ok=True)
         if tuple(int(part) for part in pillow_version.split('.')[:2])<(13,0):return fail('Picture uploads require the server security update. Contact the operator.',503)
         upload=request.files.get('picture')
         if not upload:return fail('Choose a JPEG, PNG or WebP image up to 2 MiB.')
@@ -356,7 +352,7 @@ def register_launch(app, db):
         if account['guest']:db().execute('INSERT OR IGNORE INTO guest_data(owner,created) VALUES(?,?)',(account['id'],time.time()))
         old=db().execute('SELECT COALESCE(length(avatar),0) FROM '+table+' WHERE '+column+'=?',(account['id'],)).fetchone()[0]
         if quota['usage'](account['id'])-old+len(out.getvalue())>quota['limit'](account['id']):db().rollback();return fail('Your storage limit is reached. Remove a picture or delete some history.',413)
-        db().execute('UPDATE '+table+' SET avatar=? WHERE '+column+'=?',(out.getvalue(),account['id']));db().commit();return jsonify(ok=True)
+        db().execute('UPDATE '+table+' SET avatar=? WHERE '+column+'=?',(out.getvalue(),account['id']));db().execute('UPDATE profiles SET updated=? WHERE id=?',(time.time(),account['id']));db().commit();return jsonify(ok=True)
 
     def delete_history(owner,entry=None):
         if not db().in_transaction:db().execute('BEGIN IMMEDIATE')
@@ -452,18 +448,6 @@ def register_launch(app, db):
         session.pop('account_uid',None);session['uid']=secrets.token_urlsafe(24);session['account_csrf']=secrets.token_urlsafe(32)
         response=jsonify(ok=True);response.delete_cookie('solace_account');return response
 
-    @app.get('/love')
-    def love_page():
-        if setting('love_enabled')!='1' or not db().execute('SELECT 1 FROM members WHERE id=? AND seen>?',(session['uid'],time.time()-30)).fetchone():abort(404)
-        return render_template('love-public.html')
-
-    @app.get('/love/film')
-    def love_film():
-        if setting('love_enabled')!='1' or not db().execute('SELECT 1 FROM members WHERE id=? AND seen>?',(session['uid'],time.time()-30)).fetchone():abort(404)
-        path=Path(str(config('SOLACE_LOVE_VIDEO')))
-        if not path.is_absolute() or not path.is_file() or path.resolve().is_relative_to(Path(app.static_folder).resolve()):abort(404)
-        return send_file(path,mimetype='video/mp4',conditional=True,max_age=0)
-
     app.extensions['solace_launch']={'initialize':initialize,'setting':setting,'public_url':public_url,'issue':issue,'leave_identity':leave_identity}
     from account_mail import register_account_mail
     app.extensions['solace_account_mail']=register_account_mail(app,db,config,public_url,limited,require_account)
@@ -480,5 +464,7 @@ def register_launch(app, db):
     register_safety(app,db,limited)
     from community import register_world
     register_world(app,db,limited)
+    from companions import register_companions
+    register_companions(app,db,limited)
     with app.app_context():
-        initialize();app.extensions['solace_social']['initialize']();app.extensions['solace_messaging']['initialize']();app.extensions['solace_people']['initialize']();app.extensions['solace_safety']['initialize']();app.extensions['solace_world']['initialize']()
+        initialize();app.extensions['solace_social']['initialize']();app.extensions['solace_messaging']['initialize']();app.extensions['solace_people']['initialize']();app.extensions['solace_safety']['initialize']();app.extensions['solace_world']['initialize']();app.extensions['solace_companions']['initialize']()

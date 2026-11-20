@@ -1,0 +1,313 @@
+{
+  "version": "2026.11.20.1",
+  "date": "2026-11-20",
+  "migration": 9,
+  "production_modified": false,
+  "backend": {
+    "passed": 181,
+    "failed": 0
+  },
+  "client": {
+    "passed": 69,
+    "failed": 0
+  },
+  "http_smoke": {
+    "passed": 61,
+    "failed": 0
+  },
+  "javascript_syntax_files": 59,
+  "typescript_passed": true,
+  "expo_android_ios_exports_passed": true,
+  "packaged_browser": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "personal_settings_and_room_management_separate": true,
+      "contained_toggles": true,
+      "profile_and_friend_search": true,
+      "world_gif_avatars_reactions_receipts": true,
+      "in_app_request_and_game_notifications": true,
+      "three_games_without_stream_room": true,
+      "portrait_footer_after_play_and_video_change": true,
+      "compact_mobile_navigation": true,
+      "physical_devices": false,
+      "actual_media": true,
+      "webkit_navigation_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "personal_settings_and_room_management_separate": true,
+      "contained_toggles": true,
+      "profile_and_friend_search": true,
+      "world_gif_avatars_reactions_receipts": true,
+      "in_app_request_and_game_notifications": true,
+      "three_games_without_stream_room": true,
+      "portrait_footer_after_play_and_video_change": true,
+      "compact_mobile_navigation": true,
+      "physical_devices": false,
+      "actual_media": false,
+      "webkit_navigation_diagnostics": 0
+    }
+  ],
+  "navigation": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "guest_and_account_home_profile": true,
+      "screen_scoped_requests": true,
+      "one_visible_profile_and_room_return": true,
+      "contextual_picture_actions": true,
+      "guest_upgrade_keeps_player": true,
+      "single_auth_navigation": true,
+      "signout_cancel_and_host_transfer": true,
+      "portrait_landscape_desktop": true,
+      "physical_phones": false,
+      "media": "decoded synthetic HTTPS video",
+      "navigation_unload_diagnostics": 0
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "guest_and_account_home_profile": true,
+      "screen_scoped_requests": true,
+      "one_visible_profile_and_room_return": true,
+      "contextual_picture_actions": true,
+      "guest_upgrade_keeps_player": true,
+      "single_auth_navigation": true,
+      "signout_cancel_and_host_transfer": true,
+      "portrait_landscape_desktop": true,
+      "physical_phones": false,
+      "media": "simulated player",
+      "navigation_unload_diagnostics": 0
+    }
+  ],
+  "community": [
+    {
+      "engine": "chromium",
+      "passed": true,
+      "media": "actual decoded synthetic HTTPS video",
+      "navigation_keeps_player_and_command_revision": true,
+      "public_chat_between_strangers": true,
+      "choice_saved": true,
+      "multiple_tabs_unique": true,
+      "settings_persisted": true,
+      "reconnect_preserves_draft_and_player": true,
+      "explicit_room_switch_verified": true,
+      "navigation_unload_diagnostics": 0,
+      "keyboard_cycles": [
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        }
+      ],
+      "physical_devices": false
+    },
+    {
+      "engine": "webkit",
+      "passed": true,
+      "media": "simulated player",
+      "navigation_keeps_player_and_command_revision": true,
+      "public_chat_between_strangers": true,
+      "choice_saved": true,
+      "multiple_tabs_unique": true,
+      "settings_persisted": true,
+      "reconnect_preserves_draft_and_player": true,
+      "explicit_room_switch_verified": true,
+      "navigation_unload_diagnostics": 0,
+      "keyboard_cycles": [
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "portrait",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        },
+        {
+          "orientation": "landscape",
+          "latest_visible": true,
+          "overlap": false
+        }
+      ],
+      "physical_devices": false
+    }
+  ],
+  "keyboard": {
+    "passed": true,
+    "physical_phone": false,
+    "media": "simulated player with real Flask room transport",
+    "four_destinations": true,
+    "back_ancestry": true,
+    "love_copy_anonymized_private_film_excluded": true,
+    "cycles": [
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.018
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.018
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.014
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "iphone-viewport",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.021
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.019
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "portrait",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.013
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 0,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.011
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 1,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0
+      },
+      {
+        "keyboard_model": "android-resize",
+        "orientation": "landscape",
+        "cycle": 2,
+        "no_overlap": true,
+        "latest_visible": true,
+        "drift_seconds": 0.009
+      }
+    ]
+  },
+  "games": {
+    "passed": true,
+    "themes_saved_per_device": true,
+    "ttt_series_mutual_rematch": true,
+    "hoops_cooperative_win": true,
+    "ludo_quick_preview_move": true,
+    "both_orientations": true,
+    "stream_drift_seconds": [
+      0.011,
+      0.009,
+      0.012
+    ],
+    "physical_phones": false
+  },
+  "additional_browser_checks": {
+    "social_home": [
+      "chromium",
+      "webkit"
+    ],
+    "private_messages_media": [
+      "chromium",
+      "webkit"
+    ],
+    "staff_mfa_reporting": [
+      "chromium",
+      "webkit"
+    ]
+  },
+  "archive": {
+    "extracted_startup_and_migration": true,
+    "community_and_cleanup": true,
+    "standalone_game_without_room": true,
+    "private_files_excluded": true,
+    "manifest_byte_checks": true
+  },
+  "confirmed_fix": "A closed room-confirmation dialog could suppress the next immediate room change; stale closed dialogs are discarded without overwriting the next active dialog.",
+  "limitations": [
+    "No physical Android or iPhone available.",
+    "Chromium used decoded synthetic HTTPS video; principal WebKit playback checks used a simulated player.",
+    "Keyboard models are viewport simulations, not actual OS keyboards.",
+    "No production deployment or production load test.",
+    "In-app notifications use foreground polling; browser/native haptics depend on platform support.",
+    "Existing operational launch gates remain; see LAUNCH-READINESS.md."
+  ],
+  "test_notes": [
+    "First safety retry reached the real profile update rate limit after cumulative fixtures. Fresh isolated release fixture passed both engines without altering limits.",
+    "Synthetic HTTPS fixture may log connection reset during browser teardown; application browser assertions passed."
+  ]
+}

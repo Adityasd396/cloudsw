@@ -128,7 +128,7 @@ class PublicLaunchTests(unittest.TestCase):
         outsider=app.test_client();self.assertEqual(self.watch(outsider).status_code,403)
         self.assertEqual(self.host.get('/static/media/for-jaanu.mp4').status_code,404)
         self.assertEqual(self.host.get('/static/love.html').status_code,404)
-        self.assertEqual(self.host.post(self.url,json={'action':'chat','body':'/iloveyou'}).status_code,409)
+        self.assertEqual(self.host.post(self.url,json={'action':'chat','body':'/iloveyou'}).status_code,200)
 
     def test_login_rate_limits_are_persistent(self):
         token=self.host.get('/api/me').json['csrf']

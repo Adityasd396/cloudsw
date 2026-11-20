@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory(prefix='solace-stream-audit-') as instance:
     media=ROOT/'.openai/stream-audit/media'
     @app.get('/__audit__/info')
     def info():
-        modules=[name for name in ['app.py','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','room_game.py','ludo_game.py','game_options.py','launch.py','account_mail.py','user_storage.py','production.py','admin_panel.py'] if (source/name).is_file()]
+        modules=[name for name in ['app.py','companions.py','community.py','messaging.py','people.py','platform_safety.py','staff_auth.py','room_game.py','ludo_game.py','game_options.py','launch.py','account_mail.py','user_storage.py','production.py','admin_panel.py'] if (source/name).is_file()]
         return jsonify(disposable=True,pid=os.getpid(),media_bytes=(media/'clip.mp4').stat().st_size,fingerprint_modules=modules,source_fingerprint=hashlib.sha256(b''.join((source/name).read_bytes() for name in modules)).hexdigest())
     @app.get('/__audit__/media/<path:name>')
     def audit_media(name):return send_from_directory(media,name,conditional=True)

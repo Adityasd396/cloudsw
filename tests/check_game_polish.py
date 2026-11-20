@@ -16,7 +16,7 @@ with sync_playwright() as p:
  # Themes are local, survive refresh, and do not publish playback commands.
  before=host.request.get(url).json()['playback_revision']
  for page,key in [(host,'rose'),(peer,'ocean')]:
-  page.evaluate("showScreen('settings')");page.locator('[data-theme='+key+']').click();assert page.evaluate('document.body.dataset.chatTheme')==key
+  page.evaluate("SolaceRoomNavigation.open('/settings')");page.frame_locator('.room-private-screen iframe').locator('[data-theme='+key+']').click();page.wait_for_function('(key)=>document.body.dataset.chatTheme===key',arg=key)
   page.reload();page.wait_for_selector('body.room-connected');page.evaluate("showScreen('watch')");page.evaluate(STUB);assert page.evaluate('document.body.dataset.chatTheme')==key
  assert host.request.get(url).json()['playback_revision']==before
  counter=0;drifts=[]

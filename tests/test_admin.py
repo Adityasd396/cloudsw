@@ -31,24 +31,13 @@ class PrivatePanelTests(unittest.TestCase):
         token=re.search(r'name="csrf" value="([^"]+)"',page.text).group(1)
         return self.admin.post('/ops/solace',data={'csrf':token,'password':self.password})
 
-    def test_love_switch_requires_admin_csrf_and_private_configured_film(self):
-        self.assertEqual(self.fixture.host.get('/ops/solace/settings').status_code,401)
+    def test_retired_feature_has_no_admin_control_or_endpoint(self):
         self.login()
-        page=self.admin.get('/ops/solace');token=re.search(r'name="csrf" value="([^"]+)"',page.text).group(1)
-        headers={'X-CSRF-Token':token}
-        self.assertFalse(self.admin.get('/ops/solace/settings').json['love_enabled'])
-        self.assertEqual(self.admin.post('/ops/solace/settings',json={'love_enabled':True}).status_code,403)
-        with patch.dict(app.config,{'SOLACE_LOVE_VIDEO':''}):
-            self.assertEqual(self.admin.post('/ops/solace/settings',json={'love_enabled':True},headers=headers).status_code,409)
-        with patch.dict(app.config,{'SOLACE_LOVE_VIDEO':str((Path(__file__).parent/'fixtures/stream-test.mp4').resolve())}):
-            self.assertTrue(self.admin.post('/ops/solace/settings',json={'love_enabled':True},headers=headers).json['love_enabled'])
-            self.assertEqual(self.fixture.host.post(self.fixture.url,json={'action':'chat','body':'/iloveyou'}).status_code,200)
-            film=self.fixture.guest.get('/love/film',headers={'Range':'bytes=0-1023'})
-            try:self.assertEqual(film.status_code,206)
-            finally:film.close()
-            self.assertFalse(self.admin.post('/ops/solace/settings',json={'love_enabled':False},headers=headers).json['love_enabled'])
-            self.assertEqual(self.fixture.guest.get('/love').status_code,404)
-            self.assertEqual(self.fixture.host.post(self.fixture.url,json={'action':'chat','body':'/iloveyou'}).status_code,409)
+        page=self.admin.get('/ops/solace')
+        self.assertNotIn('loveEnabled',page.text)
+        self.assertNotIn('/iloveyou',page.text)
+        self.assertEqual(self.admin.get('/ops/solace/settings').status_code,404)
+        self.assertEqual(self.admin.post('/ops/solace/settings',json={'love_enabled':True}).status_code,404)
 
     def test_private_data_and_backup_require_auth_and_panel_has_no_public_link(self):
         for route in ['/ops/solace/data','/ops/solace/chat-backup.json']:

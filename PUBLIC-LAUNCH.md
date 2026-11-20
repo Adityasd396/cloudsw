@@ -32,7 +32,7 @@ Existing private operations diagnostics/chat backups remain at their disclosed 3
 
 The personal film was removed from static/ and is excluded from both launch ZIPs. A local preservation copy is under .openai/private-love/ and is not packaged. **On an existing host, remove the old `static/media/for-jaanu.mp4` before opening the launch to the public**, especially when PythonAnywhere serves static files directly. Also remove any legacy static love page if a previous static mapping exposes it. Flask now rejects those legacy paths, but it cannot intercept a reverse proxy's direct file response.
 
-The private admin panel has an Enable /iloveyou switch. It defaults off. To use it, supply an appropriately licensed, non-personal MP4 outside every public/static directory using `SOLACE_LOVE_VIDEO=/absolute/private/path/film.mp4`, then enable the switch. Only current room participants can request /love and /love/film; Range playback is supported and responses are no-store. Turning it off blocks new prompts and closes an open moment on the next room snapshot. Existing romantic copy is retained apart from anonymizing the personal name.
+The personal video prompt, its administrator switch and film-serving routes have been removed. Old settings cannot re-enable it.
 
 ## Remaining launch gates
 

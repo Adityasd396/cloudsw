@@ -13,10 +13,13 @@ def register_game(app, db):
     def basketball(room_id):
         connection=db()
         connection.execute('BEGIN IMMEDIATE' if request.method=='POST' else 'BEGIN')
-        if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
-            return jsonify(error='Room not found.'),404
-        members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
-        if session['uid'] not in members:return jsonify(error='Join the room first.'),403
+        if room_id.startswith('g_'):
+            members=app.extensions['solace_companions']['game_context'](room_id)
+        else:
+            if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
+                return jsonify(error='Room not found.'),404
+            members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
+            if session['uid'] not in members:return jsonify(error='Join the room first.'),403
         row=connection.execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
         state=json.loads(row['state']) if row else dict(board=['']*9,players={},turn='X',winner=None,revision=0)
         game=state.get('basketball',dict(players={},scores={'X':0,'O':0},turn='X',winner=None,revision=0,shot=None))
@@ -91,11 +94,14 @@ def register_game(app, db):
     def room_game(room_id):
         connection=db()
         connection.execute('BEGIN IMMEDIATE' if request.method=='POST' else 'BEGIN')
-        if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
-            return jsonify(error='Room not found.'),404
-        members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
-        if session['uid'] not in members:
-            return jsonify(error='Join the room first.'),403
+        if room_id.startswith('g_'):
+            members=app.extensions['solace_companions']['game_context'](room_id)
+        else:
+            if not connection.execute('SELECT 1 FROM rooms WHERE id=?',(room_id,)).fetchone():
+                return jsonify(error='Room not found.'),404
+            members={m['id']:m['name'] for m in connection.execute('SELECT id,name FROM members WHERE room=?',(room_id,))}
+            if session['uid'] not in members:
+                return jsonify(error='Join the room first.'),403
         row=connection.execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
         game=json.loads(row['state']) if row else dict(board=['']*9,players={},turn='X',winner=None,revision=0)
         if any(uid not in members for uid in game['players'].values()):

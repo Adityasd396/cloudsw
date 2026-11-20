@@ -14,7 +14,7 @@ def register_messaging(app,db,limited,csrf_valid):
     ready=set();image_gate=threading.BoundedSemaphore(1)
     @app.errorhandler(HTTPException)
     def communication_error(error):
-        if request.path.startswith(('/api/me/conversations','/api/me/media','/api/me/room-media','/api/me/world','/api/me/preferences')):return jsonify(error=error.description),error.code
+        if request.path.startswith(('/api/me/conversations','/api/me/media','/api/me/room-media','/api/me/world','/api/me/preferences','/api/me/chat','/api/me/play','/api/me/notifications','/api/me/moments','/api/rooms/g_')):return jsonify(error=error.description),error.code
         return error
     def initialize():
         if app.instance_path in ready:return
@@ -288,8 +288,9 @@ def register_messaging(app,db,limited,csrf_valid):
         if not db().execute("SELECT 1 FROM sqlite_master WHERE name='chat_media'").fetchone():return
         db().execute("DELETE FROM chat_media WHERE scope='room' AND scope_id=?",(room,));db().execute('DELETE FROM media_sends WHERE room=?',(room,))
     def erase_owner(uid):
+        app.extensions['solace_companions']['erase_owner'](uid)
         db().execute("UPDATE world_messages SET body='',deleted=1 WHERE sender=?",(uid,));app.extensions['solace_world']['bump']()
         db().execute('DELETE FROM user_preferences WHERE owner=?',(uid,));db().execute('DELETE FROM world_presence WHERE owner=?',(uid,))
         db().execute('UPDATE chat_media SET data=NULL,poster=NULL,bytes=0,deleted=1 WHERE owner=?',(uid,));db().execute("UPDATE dm_messages SET body='',deleted=1 WHERE sender=?",(uid,));db().execute('DELETE FROM dm_typing WHERE owner=?',(uid,))
         db().execute('DELETE FROM dm_inbox WHERE owner=?',(uid,))
-    app.extensions['solace_messaging']={'initialize':initialize,'room_items':room_items,'erase_room':erase_room,'erase_owner':erase_owner,'body':body,'staged_media':staged_media,'media_info':media_info,'erase_media':erase_media}
+    app.extensions['solace_messaging']={'initialize':initialize,'conversation':conversation,'room_items':room_items,'erase_room':erase_room,'erase_owner':erase_owner,'body':body,'staged_media':staged_media,'media_info':media_info,'erase_media':erase_media}

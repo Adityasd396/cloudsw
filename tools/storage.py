@@ -54,6 +54,7 @@ def restore(source,target):
                 for table in ('account_sessions','account_tokens','native_handoffs','dm_typing','discovery_leases','world_presence'):
                     if connection.execute('SELECT 1 FROM sqlite_master WHERE name=?',(table,)).fetchone():connection.execute('DELETE FROM '+table)
                 if connection.execute("SELECT 1 FROM sqlite_master WHERE name='room_settings'").fetchone():connection.execute('UPDATE room_settings SET epoch=epoch+1,link_hash=NULL,link_token=NULL')
+                if connection.execute("SELECT 1 FROM sqlite_master WHERE name='play_invitations'").fetchone():connection.execute("UPDATE play_invitations SET status='revoked' WHERE status='pending'")
                 if connection.execute("SELECT 1 FROM sqlite_master WHERE name='room_invitations'").fetchone():connection.execute("UPDATE room_invitations SET status='revoked' WHERE status='pending'")
                 connection.commit()
         if name=='solace-admin.db':

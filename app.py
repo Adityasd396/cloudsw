@@ -585,7 +585,6 @@ def room(room_id):
     room['typing'] = [row['name'] for row in db().execute('SELECT members.name FROM typing JOIN members ON typing.room=members.room AND typing.id=members.id WHERE typing.room=? AND typing.id<>? AND typing.updated>? AND members.seen>?',(room_id,session['uid'],now-4,now-20))]
     room['queue'] = [dict(x) for x in db().execute('SELECT * FROM queue WHERE room=? ORDER BY sort_order,id',(room_id,))]
     room['ludo_roll']=None
-    room['love_enabled']=app.extensions['solace_launch']['setting']('love_enabled')=='1'
     game_row=db().execute('SELECT state FROM room_games WHERE room=?',(room_id,)).fetchone()
     if game_row:
         ludo=json.loads(game_row['state']).get('ludo',{});roll=ludo.get('last_roll')

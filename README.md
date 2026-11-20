@@ -1,3 +1,11 @@
+# Solace 2026.11.20.2 — public upload cleanup
+
+Removed the personal video prompt entirely from web/native clients, administrator controls, room snapshots, configuration and film-serving routes. Removed its letter, scripts, styles and template from public assets and generated packages. Other chat gestures and games remain available. Existing users, chats and settings are preserved; no schema migration is needed. Rebuild the native apps to remove the old client feature. Earlier release notes below are historical.
+
+# Solace 2026.11.20.1 — consolidated settings and social experience
+
+Personal preferences now have one Settings page; room management is inline on the Room page. Added authorized chat avatars, long-press reactions and privacy-aware receipts, compact mobile navigation, standalone friend games, in-app alerts and real Moments summaries. Migration 9 is additive. Upload the complete generated package, including companions.py; preserve instance data and secrets. See SOCIAL-EXPERIENCE.md and audit-results/companion-verification.json for behavior and verification limits. Physical mobile acceptance remains outstanding. Earlier notes below are historical.
+
 Current release **2026.11.19.5** fixes Home/Profile duplicate actions and auth navigation, and resolves the 59 conflicted files against the verified prior release. See [NAVIGATION-CLEANUP.md](NAVIGATION-CLEANUP.md). Use the complete generated ZIP; preserve instance data and secrets. Earlier notes below are historical.
 
 Current update **2026.11.19.4**: focused screens, persistent room navigation, centralized Settings and Open World community chat. See [UX-COMMUNITY.md](UX-COMMUNITY.md). Migration 8 is additive. Upload the complete generated release, including community.py; preserve existing secrets and instance data. Native apps need a rebuild. Earlier release notes below are historical.

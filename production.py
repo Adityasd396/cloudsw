@@ -51,7 +51,7 @@ def register_production(app,db):
     @app.after_request
     def request_finish(response):
         response.headers['X-Request-ID']=getattr(g,'request_id',secrets.token_hex(16))
-        if (request.path.startswith('/ops/') or request.path in ('/profile','/report','/world','/safety','/watch-together','/watch-rooms','/friends-messaging','/open-world','/play-together','/community-guidelines','/','/features','/how-it-works','/about','/faq','/contact','/privacy','/terms','/signin','/signup','/account','/history','/room-media','/media-view','/messages','/settings','/friends','/rooms','/games','/home','/welcome','/invite','/room-control','/reset-password','/verify-email')) and not (request.path=='/' and request.args.get('room')):
+        if (request.path.startswith('/play/') or request.path.startswith('/ops/') or request.path in ('/profile','/report','/world','/safety','/watch-together','/watch-rooms','/friends-messaging','/open-world','/play-together','/community-guidelines','/','/features','/how-it-works','/about','/faq','/contact','/privacy','/terms','/signin','/signup','/account','/history','/room-media','/media-view','/messages','/settings','/friends','/rooms','/games','/home','/welcome','/invite','/room-control','/reset-password','/verify-email')) and not (request.path=='/' and request.args.get('room')):
             response.headers.setdefault('Content-Security-Policy',"default-src 'self'; script-src 'self' 'nonce-"+getattr(g,'csp_nonce','')+"'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'")
         if os.environ.get('SOLACE_LOG_REQUESTS')=='1' or response.status_code>=500:
             level=logging.ERROR if response.status_code>=500 else logging.INFO
@@ -61,7 +61,7 @@ def register_production(app,db):
     @app.get('/api/ready')
     def readiness():
         healthy=True
-        try:healthy=db().execute('SELECT MAX(version) FROM launch_migrations').fetchone()[0]>=8
+        try:healthy=db().execute('SELECT MAX(version) FROM launch_migrations').fetchone()[0]>=9
         except Exception:healthy=False
         configured=not configuration_errors(app)
         try:space=shutil.disk_usage(app.instance_path).free>=256*1024*1024

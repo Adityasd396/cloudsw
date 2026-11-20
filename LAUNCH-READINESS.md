@@ -1,3 +1,11 @@
+# Solace 2026.11.20.2 — public upload cleanup
+
+Removed the personal video prompt entirely from web/native clients, administrator controls, room snapshots, configuration and film-serving routes. Removed its letter, scripts, styles and template from public assets and generated packages. Other chat gestures and games remain available. Existing users, chats and settings are preserved; no schema migration is needed. Rebuild the native apps to remove the old client feature. Earlier release notes below are historical.
+
+# Solace 2026.11.20.1 — consolidated settings and social experience
+
+Personal preferences now have one Settings page; room management is inline on the Room page. Added authorized chat avatars, long-press reactions and privacy-aware receipts, compact mobile navigation, standalone friend games, in-app alerts and real Moments summaries. Migration 9 is additive. Upload the complete generated package, including companions.py; preserve instance data and secrets. See SOCIAL-EXPERIENCE.md and audit-results/companion-verification.json for behavior and verification limits. Physical mobile acceptance remains outstanding. Earlier notes below are historical.
+
 # Navigation cleanup — 19 November 2026
 
 Version **2026.11.19.5** restores the verified current code from 59 conflicted files and fixes duplicated Home/Profile actions and embedded auth navigation. Local verification: 169 backend tests, 68 client tests, TypeScript and both mobile JS exports. Final browser and archive evidence is in audit-results/navigation-verification.json; physical phones and the operational launch gates below remain outstanding. Schema stays at version 8. No production deployment was performed.
@@ -131,7 +139,7 @@ No evidence supports buying a GPU or adding transcoding hardware. The next demon
 ## Setup, deployment and rollback
 
 1. Use Python 3.13+ and the pinned requirements.lock; native source uses the committed npm lockfile and was checked with Node 26.13.0. The new Python environment here was project-local; system packages were not changed. Copy all contents of Solace-pythonanywhere.zip together, including new modules, templates/static files, lockfile and tools. Preserve instance/, existing keys and admin hash. Remove the old deployed static/media/for-jaanu.mp4, particularly when PythonAnywhere serves static directly.
-2. Configure .env.example values in the process/WSGI environment **before importing app**. It is documentation, not an automatic dotenv loader. Required: SOLACE_ENV=production, SOLACE_PUBLIC_URL, SOLACE_CONTACT_EMAIL, persistent SECRET_KEY/file, secure cookies, admin password hash/file. SMTP uses SOLACE_SMTP_HOST, SOLACE_SMTP_PORT, SOLACE_SMTP_SSL, SOLACE_SMTP_USERNAME, SOLACE_SMTP_PASSWORD and SOLACE_MAIL_FROM, always TLS/STARTTLS. YOUTUBE_API_KEY or its saved server file enables search. Optional SOLACE_LOVE_VIDEO must be licensed and outside static; enable it in admin explicitly. SOLACE_INSTANCE_PATH can name an absolute persistent directory. Proxy trust flags must match a real trusted proxy that overwrites forwarded headers.
+2. Configure .env.example values in the process/WSGI environment **before importing app**. It is documentation, not an automatic dotenv loader. Required: SOLACE_ENV=production, SOLACE_PUBLIC_URL, SOLACE_CONTACT_EMAIL, persistent SECRET_KEY/file, secure cookies, admin password hash/file. SMTP uses SOLACE_SMTP_HOST, SOLACE_SMTP_PORT, SOLACE_SMTP_SSL, SOLACE_SMTP_USERNAME, SOLACE_SMTP_PASSWORD and SOLACE_MAIL_FROM, always TLS/STARTTLS. YOUTUBE_API_KEY or its saved server file enables search. SOLACE_INSTANCE_PATH can name an absolute persistent directory. Proxy trust flags must match a real trusted proxy that overwrites forwarded headers.
 3. Before replacement, create and verify a new private backup directory:
 
 ```text

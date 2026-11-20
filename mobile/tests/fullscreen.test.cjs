@@ -11,3 +11,8 @@ test('iPhone fallback enters and exits when element fullscreen is missing or den
  let calls=0;await context.toggleSolaceFullscreen({webkitRequestFullscreen(){calls++}});assert.equal(calls,1);
  events.webkitfullscreenchange();assert.equal(classes.has('solace-fullscreen'),false);
 });
+test('portrait fullscreen includes the footer by requesting the document root',async()=>{
+ const classes=new Set();let rootCalls=0,surfaceCalls=0;
+ const context={matchMedia:()=>({matches:true}),document:{documentElement:{requestFullscreen(){rootCalls++;return Promise.resolve()}},body:{classList:{contains:n=>classes.has(n),add:n=>classes.add(n),remove:n=>classes.delete(n)}},addEventListener(){}}};
+ vm.createContext(context);vm.runInContext(source,context);await context.toggleSolaceFullscreen({requestFullscreen(){surfaceCalls++}});assert.equal(rootCalls,1);assert.equal(surfaceCalls,0);
+});

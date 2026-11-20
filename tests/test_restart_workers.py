@@ -34,7 +34,7 @@ import json,sys
 from app import app,db
 data=json.load(sys.stdin);c=app.test_client();c.set_cookie('session',data['cookies'][0]);url='/api/rooms/'+data['room'];room=c.get(url).json
 assert len(room['queue'])==2;assert c.get(url+'/game').json['board'][0]=='X'
-with app.app_context():assert db().execute('SELECT MAX(version) FROM launch_migrations').fetchone()[0]==8
+with app.app_context():assert db().execute('SELECT MAX(version) FROM launch_migrations').fetchone()[0]==9
 print('persisted')
 '''
             result=subprocess.run([sys.executable,'-B','-c',probe],cwd=ROOT,env=env,input=json.dumps(data),text=True,capture_output=True,timeout=20);self.assertEqual(result.returncode,0,result.stderr);self.assertIn('persisted',result.stdout)

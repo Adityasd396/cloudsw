@@ -19,6 +19,10 @@ def cleanup(instance,now=None):
                     connection.execute('DELETE FROM safety_notes WHERE report IN (SELECT id FROM safety_reports WHERE created<?)',(now-180*86400,));connection.execute('DELETE FROM safety_reports WHERE created<?',(now-180*86400,));connection.execute('DELETE FROM safety_appeals WHERE created<?',(now-180*86400,))
                 if 'world_messages' in tables:
                     connection.execute("DELETE FROM chat_media WHERE scope='world' AND message IN (SELECT id FROM world_messages WHERE created<?)",(cutoff,));result['world_messages']=connection.execute('DELETE FROM world_messages WHERE created<?',(cutoff,)).rowcount;connection.execute('DELETE FROM world_receipts WHERE created<?',(cutoff,));connection.execute('DELETE FROM world_presence WHERE expires<?',(now,));connection.execute('UPDATE world_state SET revision=revision+1 WHERE id=1')
+                if 'chat_reactions' in tables:
+                    for table,column in [('chat_reactions','created'),('chat_reads','updated'),('notice_receipts','seen')]:connection.execute('DELETE FROM '+table+' WHERE '+column+'<?',(cutoff,))
+                    for row in connection.execute('SELECT id FROM play_sessions WHERE expires<?',(now,)).fetchall():
+                        for table,column in [('room_games','room'),('play_members','game'),('play_invitations','game'),('play_sessions','id')]:connection.execute('DELETE FROM '+table+' WHERE '+column+'=?',(row[0],))
                 if 'discovery_leases' in tables:connection.execute('DELETE FROM discovery_leases WHERE expires<?',(now,))
                 if 'chat_media' in tables:result['unused_uploads']=connection.execute('DELETE FROM chat_media WHERE message IS NULL AND uploaded<?',(now-86400,)).rowcount
                 if {'watch_history','accounts','watch_people','watch_slices'}<=tables:

@@ -148,7 +148,7 @@ def register_admin(app):
             # Preserve Origin on same-site form posts; no-referrer can produce Origin:null.
             response.headers.update({'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
             return response
-        if request.path.startswith(('/api/me/conversations','/api/me/media','/api/me/room-media','/api/me/world','/api/me/preferences')):return response
+        if request.path.startswith(('/api/me/conversations','/api/me/media','/api/me/room-media','/api/me/world','/api/me/preferences','/api/me/chat','/api/me/play','/api/me/notifications','/api/me/moments','/play/')):return response
         if request.path!='/' and not request.path.startswith('/api/'):return response
         now=time.time();key=app.instance_path;uid=visitor();ip=client_ip()
         try:payload=request.get_json(silent=True) if request.is_json else {}
@@ -219,20 +219,6 @@ def register_admin(app):
         auth=getattr(g,'ops_auth',{})
         if auth.get('staff_id') and app.extensions.get('solace_safety'):
             app.extensions['solace_safety']['audit']({'id':auth['staff_id'],'username':auth['username']},'operations_setting',request.path,g.ops_change_reason,'success',False)
-
-    @app.route(BASE+'/settings',methods=['GET','POST'])
-    def public_launch_settings():
-        if not authorized():abort(401)
-        launch=app.extensions['solace_launch'];launch['initialize']()
-        if request.method=='POST':
-            if not csrf_valid():abort(403)
-            data=request.get_json(silent=True) or {}
-            if type(data.get('love_enabled')) is not bool:return jsonify(error='Choose on or off.'),400
-            path=Path(app.config.get('SOLACE_LOVE_VIDEO') or os.environ.get('SOLACE_LOVE_VIDEO',''))
-            if data['love_enabled'] and (not path.is_absolute() or not path.is_file() or path.resolve().is_relative_to(Path(app.static_folder).resolve())):return jsonify(error='Configure SOLACE_LOVE_VIDEO with a licensed MP4 outside static/ before enabling this gesture.'),409
-            from app import db
-            db().execute("UPDATE launch_settings SET value=? WHERE key='love_enabled'",('1' if data['love_enabled'] else '0',));audit_setting();db().commit()
-        return jsonify(love_enabled=launch['setting']('love_enabled')=='1')
 
     @app.route(BASE+'/storage',methods=['GET','POST'])
     def operations_user_storage():

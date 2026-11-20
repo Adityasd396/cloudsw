@@ -177,7 +177,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--serve',action='store_true');parser.add_argument('--port',type=int,default=0);args=parser.parse_args()
     fixture=WatchPartyTests('test_validation_and_access');fixture.setUp()
     fixture.host.post(fixture.url+'/leave',json={});fixture.guest.post(fixture.url+'/leave',json={})
-    app.secret_key=secrets.token_hex(32);app.config.update(TESTING=False,SESSION_COOKIE_NAME='solace_smoke_session',OPS_PASSWORD_HASH=generate_password_hash(PASSWORD,method='scrypt'),SOLACE_LOVE_VIDEO=str((ROOT/'tests/fixtures/stream-test.mp4').resolve()),SOLACE_SMTP_HOST='')
+    app.secret_key=secrets.token_hex(32);app.config.update(TESTING=False,SESSION_COOKIE_NAME='solace_smoke_session',OPS_PASSWORD_HASH=generate_password_hash(PASSWORD,method='scrypt'),SOLACE_SMTP_HOST='')
     server=create_server(app,host='127.0.0.1',port=args.port,threads=4,channel_timeout=15)
     base='http://127.0.0.1:'+str(server.effective_port)
     thread=threading.Thread(target=server.run,daemon=True);thread.start();success=False

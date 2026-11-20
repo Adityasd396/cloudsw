@@ -11,7 +11,6 @@ with sync_playwright() as p:
  login=admin.get(BASE+'/ops/solace');token=re.search(r'name="csrf" value="([^"]+)"',login.text()).group(1)
  assert admin.post(BASE+'/ops/solace',form={'csrf':token,'password':'Disposable-Smoke-Only-2026!'},max_redirects=0).status==303
  dashboard=admin.get(BASE+'/ops/solace');token=re.search(r'name="csrf" value="([^"]+)"',dashboard.text()).group(1)
- assert admin.post(BASE+'/ops/solace/settings',data={'love_enabled':True},headers={'X-CSRF-Token':token}).ok
  for model in ['iphone-viewport','android-resize']:
   pages=[]
   for name in ['Peach','Berry']:
@@ -57,26 +56,18 @@ with sync_playwright() as p:
    assert host.locator('.bottom-nav button').count()==5
    assert host.locator('#selectionQuery').evaluate('(el)=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el}')
    host.locator('#closeSelection').click();host.wait_for_function("activeScreen==='queue'");host.locator('section[data-screen=queue] .screen-back').click()
-   host.evaluate("showScreen('room')");host.locator('section[data-screen=room]').get_by_role('button',name='Settings',exact=True).click();settings=host.frame_locator('.room-private-screen iframe');settings.locator('#spacePrivacy').wait_for();assert settings.locator('#spacePrivacy [role=switch]').count()==4
+   host.evaluate("SolaceRoomNavigation.open('/settings')");settings=host.frame_locator('.room-private-screen iframe');settings.locator('#spacePrivacy').wait_for();assert settings.locator('#spacePrivacy [role=switch]').count()==4
    assert host.evaluate('videoStage===keptStage');host.locator('.room-private-screen .screen-back').click();host.wait_for_function("activeScreen==='watch'")
-  host.wait_for_timeout(600);host.locator('#message').fill('/iloveyou');host.locator('.send').tap()
+  host.locator('#message').fill('/iloveyou');host.locator('.send').tap()
   for page in pages:
-   page.locator('.love-overlay').wait_for(state='visible');frame=page.frame_locator('.love-overlay iframe');frame.locator('#loveTitle').wait_for();assert frame.locator('#loveTitle').inner_text()=='You are my solace.'
-   assert frame.locator('#loveVideo').evaluate('v=>!v.muted')
-   for w,h in [(390,844),(844,390)]:
-    page.set_viewport_size({'width':w,'height':h});page.wait_for_timeout(100);assert frame.locator('.film').evaluate('(el)=>el.getBoundingClientRect().right<=innerWidth+1');page.screenshot(path=str(ROOT/('solace-love-'+str(w)+'.png')))
-  assert admin.post(BASE+'/ops/solace/settings',data={'love_enabled':False},headers={'X-CSRF-Token':token}).ok
-  for page in pages:
-   page.locator('.love-overlay').wait_for(state='detached');assert page.evaluate('videoStage===keptStage')
-  assert admin.post(BASE+'/ops/solace/settings',data={'love_enabled':True},headers={'X-CSRF-Token':token}).ok
+   page.locator('.chat-message').filter(has_text='/iloveyou').wait_for()
+   assert not page.locator('.love-overlay').count()
+   assert page.evaluate('videoStage===keptStage')
   for page in pages:page.request.post(BASE+'/api/rooms/'+room+'/leave',data={})
   for page in pages:page.context.close()
- assert admin.post(BASE+'/ops/solace/settings',data={'love_enabled':False},headers={'X-CSRF-Token':token}).ok
  assert not errors,errors
  browser.close()
-assert 'Jaanu' not in (ROOT/'static/love.html').read_text()
 assert not (ROOT/'static/media/for-jaanu.mp4').exists()
-assert 'You are my solace.' in (ROOT/'static/love.html').read_text()
-report={'passed':True,'physical_phone':False,'media':'simulated player with real Flask room transport','four_destinations':True,'back_ancestry':True,'love_copy_anonymized_private_film_excluded':True,'cycles':results}
+report={'passed':True,'physical_phone':False,'media':'simulated player with real Flask room transport','four_destinations':True,'back_ancestry':True,'retired_prompt_is_plain_chat':True,'cycles':results}
 (ROOT/'experience-refinements-results.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
 
